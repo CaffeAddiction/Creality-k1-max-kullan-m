@@ -1,0 +1,1490 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>K1 Max Kontrol</title>
+<style>
+:root{
+  --bg:#17171a;--panel:#222226;--panel2:#2b2b30;--panel3:#34343a;--line:#3a3a41;
+  --text:#ececef;--muted:#a3a3ad;--faint:#7c7c86;
+  --accent:#17cc5f;--accent-h:#22dc6c;--accent-ink:#04200d;--accent-soft:rgba(23,204,95,.14);
+  --danger:#ff6b6b;--danger-soft:rgba(255,107,107,.13);--warn:#ffb020;--warn-soft:rgba(255,176,32,.13);--info:#5aa9ff;
+  --radius:12px;--rail:84px;
+  --z-rail:20;--z-modal:50;--z-toast:60;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.i.fill{fill:currentColor;stroke:none}
+.i.sm{width:16px;height:16px}
+.i.lg{width:24px;height:24px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- Kabuk ---------- */
+.app{display:flex;min-height:100vh}
+.rail{position:fixed;inset:0 auto 0 0;width:var(--rail);background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px;z-index:var(--z-rail)}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;margin-bottom:14px}
+.nav{width:72px;min-height:60px;border:0;background:transparent;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;color:var(--muted);cursor:pointer;transition:background .15s,color .15s}
+.nav:hover{background:var(--panel2);color:var(--text)}
+.nav[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+.main{flex:1;margin-left:var(--rail);min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 20px;background:rgba(23,23,26,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.dev{display:flex;align-items:center;gap:10px;min-width:0}
+.dev-name{font-weight:650;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:var(--panel2);color:var(--muted);font-size:13px;white-space:nowrap}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;font-size:14px;font-weight:600;background:var(--panel2);color:var(--muted)}
+.pill .d{width:8px;height:8px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--accent-soft);color:var(--accent)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--danger-soft);color:var(--danger)}
+.spacer{flex:1}
+.conn-btn{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:6px 12px;cursor:pointer;color:var(--muted);font-size:14px}
+.conn-btn:hover{color:var(--text)}
+.cdot{width:9px;height:9px;border-radius:50%;background:var(--danger)}
+.cdot.on{background:var(--accent)}
+.content{padding:20px;max-width:1500px;width:100%}
+.view{display:none}
+.view.active{display:block}
+
+/* ---------- Ortak ---------- */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.ph{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+.ph h2{font-size:15px;font-weight:650;margin:0}
+.ph .spacer{flex:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:8px 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;font-weight:550;transition:background .15s,border-color .15s,color .15s;white-space:nowrap}
+.btn:hover:not(:disabled){background:var(--panel3)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover:not(:disabled){background:var(--accent-h);border-color:var(--accent-h)}
+.btn.danger{background:transparent;border-color:var(--danger);color:var(--danger)}
+.btn.danger:hover:not(:disabled){background:var(--danger-soft)}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:34px;padding:5px 12px;font-size:14px}
+.btn.icon{padding:0;width:40px}
+.seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;border-radius:8px;min-height:32px;padding:4px 12px;cursor:pointer;color:var(--muted);font-size:14px;font-weight:550}
+.seg button:hover:not(:disabled){color:var(--text)}
+.seg button[aria-pressed="true"]{background:var(--panel3);color:var(--accent)}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+input[type=number],input[type=text],input[type=search],select{background:var(--panel2);border:1px solid var(--line);border-radius:10px;min-height:40px;padding:6px 12px}
+input[type=number]{width:86px}
+input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
+input[type=range]:disabled{cursor:not-allowed;opacity:.5}
+.switch{position:relative;width:46px;height:26px;flex:none}
+.switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.switch span{position:absolute;inset:0;border-radius:999px;background:var(--panel3);transition:background .15s;pointer-events:none}
+.switch span::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#d5d5da;transition:transform .15s}
+.switch input:checked+span{background:var(--accent)}
+.switch input:checked+span::after{transform:translateX(20px);background:#fff}
+.switch input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.switch input:disabled{cursor:not-allowed}
+.switch input:disabled+span{opacity:.45}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hint{font-size:13px;color:var(--muted);margin:8px 0 0}
+.lbl{font-size:13px;color:var(--muted)}
+
+/* ---------- Uyarılar ---------- */
+#alerts:empty{display:none}
+#alerts{display:grid;gap:10px;margin-bottom:16px}
+.alert{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-radius:var(--radius);padding:12px 16px;background:var(--warn-soft);border:1px solid var(--warn);color:var(--text)}
+.alert .i{color:var(--warn)}
+.alert.bad{background:var(--danger-soft);border-color:var(--danger)}
+.alert.bad .i{color:var(--danger)}
+.alert p{margin:0;flex:1;min-width:200px}
+
+/* ---------- Kontrol görünümü ---------- */
+.ctl{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:16px;align-items:start}
+.col{display:grid;gap:16px;min-width:0}
+.cam-wrap{position:relative;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#0d0d0f}
+.cam-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.cam-wrap img:not([src]){display:none}
+.cam-empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--faint);text-align:center;padding:20px}
+.cam-badge{position:absolute;left:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.cam-badge .chip{background:rgba(0,0,0,.6);color:#e8e8ea}
+.job{display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;align-items:start}
+.job-thumb{width:96px;height:96px;border-radius:10px;background:var(--panel2);object-fit:contain}
+.job-name{font-weight:650;word-break:break-all;margin:0 0 4px}
+.job-state{font-size:14px;color:var(--muted)}
+.prog{display:flex;align-items:center;gap:12px;margin:12px 0 4px}
+.bar{flex:1;height:8px;background:var(--panel3);border-radius:99px;overflow:hidden}
+.bar>div{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .5s}
+.prog b{font-size:20px;min-width:56px;text-align:right}
+.jstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+.jstat{background:var(--panel2);border-radius:10px;padding:8px 12px;min-width:0}
+.jstat span{display:block;font-size:12px;color:var(--muted)}
+.jstat b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tune{display:grid;gap:14px;border-top:1px solid var(--line);padding-top:14px;margin-top:4px}
+.tune-row{display:grid;grid-template-columns:90px minmax(0,1fr) auto;gap:12px;align-items:center}
+.tune-row .val{min-width:64px;text-align:right;font-weight:600}
+.temps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.temp{background:var(--panel2);border-radius:10px;padding:12px;min-width:0}
+.temp-h{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
+.temp-cur{font-size:26px;font-weight:650;margin:4px 0 2px;line-height:1.1}
+.temp-cur small{font-size:14px;color:var(--muted);font-weight:500}
+.temp-tgt{font-size:13px;color:var(--muted);min-height:20px}
+.temp-set{display:flex;gap:6px;margin-top:8px}
+.temp-set input{width:100%;min-width:0}
+.temp-set .btn{flex:none}
+.heating .temp-cur{color:var(--warn)}
+.fans{display:grid;gap:12px}
+.fan{display:grid;grid-template-columns:auto minmax(0,1fr) 56px;gap:12px;align-items:center}
+.fan-name{display:flex;align-items:center;gap:8px;min-width:96px}
+.fan-val{text-align:right;font-weight:600}
+.motion{display:grid;grid-template-columns:auto auto;gap:22px;align-items:center;justify-content:center;margin:6px 0 14px}
+.pad{position:relative;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle at center,var(--panel) 0 31%,var(--panel2) 32% 100%);border:1px solid var(--line)}
+.pad button{position:absolute;border:0;background:transparent;color:var(--text);cursor:pointer;display:grid;place-items:center;border-radius:12px;width:56px;height:56px;font-size:12px;font-weight:600;transition:background .15s,color .15s}
+.pad button:hover:not(:disabled){background:var(--panel3);color:var(--accent)}
+.pad button:disabled{opacity:.35;cursor:not-allowed}
+.pad .up{top:6px;left:72px}.pad .down{bottom:6px;left:72px}.pad .left{left:6px;top:72px}.pad .right{right:6px;top:72px}
+.pad .home{top:72px;left:72px;border-radius:50%;background:var(--panel3)}
+.pad button span{display:block;line-height:1}
+.zcol{display:grid;gap:8px;justify-items:center}
+.zcol .btn{width:64px;flex-direction:column;gap:2px;min-height:56px;font-size:12px}
+.homed{display:flex;gap:6px;justify-content:center;margin-bottom:12px}
+.axis{padding:2px 10px;border-radius:999px;font-size:12px;font-weight:650;background:var(--panel2);color:var(--faint)}
+.axis.on{background:var(--accent-soft);color:var(--accent)}
+.ext{display:grid;gap:12px}
+.ext-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ext-row .lbl{min-width:64px}
+
+/* ---------- Nesneyi hariç tut ---------- */
+.xo-closed .ph{margin-bottom:0}
+.xo-count:empty{display:none}
+.xo-fold .i{transition:transform .15s}
+.xo-fold[aria-expanded="false"] .i{transform:rotate(-90deg)}
+.xo-map{position:relative;max-width:520px;margin:0 auto;aspect-ratio:1;border-radius:10px;background:var(--panel2);overflow:hidden}
+.xo-map svg{display:block;width:100%;height:100%;user-select:none;-webkit-user-select:none}
+.xo-msg{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted);font-size:14px;background:rgba(34,34,38,.82)}
+.xo-msg:empty{display:none}
+.xo-bed{fill:var(--panel)}
+.xo-grid{fill:none;stroke:var(--line);stroke-width:.35}
+.xo-grid.major{stroke:#4b4b53;stroke-width:.5}
+.xo-tick{fill:var(--faint);font-size:6px}
+.xo-obj{color:#c9c9d1;cursor:pointer;outline:none}
+.xo-poly{fill:rgba(255,255,255,.04);stroke:#9a9aa6;stroke-width:1.5px;vector-effect:non-scaling-stroke;stroke-linejoin:round;pointer-events:all}
+.xo-icon{fill:currentColor;stroke:none;pointer-events:none}
+.xo-hit{fill:transparent}
+.xo-num{fill:var(--muted);font-size:6px;text-anchor:middle;pointer-events:none}
+.xo-obj.cur{color:#ffc100}
+.xo-obj.cur .xo-poly{stroke:#ffc100;fill:rgba(255,193,0,.08)}
+.xo-obj:hover,.xo-obj.hot,.xo-obj:focus-visible{color:var(--accent)}
+.xo-obj:hover .xo-poly,.xo-obj.hot .xo-poly,.xo-obj:focus-visible .xo-poly{stroke:var(--accent);fill:var(--accent-soft)}
+.xo-obj.ex{color:var(--faint);cursor:default}
+.xo-obj.ex .xo-poly{stroke:var(--faint);stroke-dasharray:4 3;fill:none}
+.xo-slash{stroke:var(--danger);stroke-width:2px;vector-effect:non-scaling-stroke;stroke-linecap:round;pointer-events:none}
+.xo-noz{fill:var(--accent);stroke:#fff;stroke-width:1px;vector-effect:non-scaling-stroke;pointer-events:none}
+.xo-legend{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:12px}
+.xo-legend span{display:inline-flex;align-items:center;gap:6px}
+.xo-legend i{width:10px;height:10px;border-radius:3px;background:#9a9aa6}
+.xo-legend i.cur{background:#ffc100}
+.xo-legend i.noz{background:var(--accent);border-radius:50%}
+.xo-legend i.ex{background:none;border:1px dashed var(--faint)}
+.xo-list{display:grid;gap:6px;margin-top:12px;max-height:232px;overflow:auto}
+.xo-row{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--panel2);border-radius:10px;padding:6px 8px 6px 10px}
+.xo-idx{font-size:12px;font-weight:650;color:var(--muted);text-align:center}
+.xo-name{min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xo-name small{display:block;font-size:12px;color:var(--muted)}
+.xo-name small:empty{display:none}
+.xo-row.cur .xo-name small{color:var(--warn)}
+.xo-row.ex{opacity:.6}
+
+/* ---------- Dosyalar ---------- */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.toolbar .search{position:relative;flex:1;min-width:200px;max-width:420px}
+.toolbar .search input{width:100%;padding-left:38px}
+.toolbar .search .i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.upbar{display:none;align-items:center;gap:12px;margin-bottom:16px;padding:12px 16px}
+.upbar.show{display:flex}
+.drop{position:fixed;inset:0;z-index:var(--z-modal);background:rgba(10,10,12,.75);display:none;place-items:center}
+.drop.show{display:grid}
+.drop div{border:2px dashed var(--accent);border-radius:20px;padding:40px 60px;color:var(--accent);font-size:20px;font-weight:650;display:flex;flex-direction:column;align-items:center;gap:12px;background:var(--panel)}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.fcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s}
+.fcard:hover{border-color:var(--panel3)}
+.fcard.current{border-color:var(--accent)}
+.fthumb{aspect-ratio:1/1;background:var(--panel2);display:grid;place-items:center;color:var(--faint)}
+.fthumb img{width:100%;height:100%;object-fit:contain}
+.fbody{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
+.fname{font-weight:600;font-size:14px;line-height:1.35;word-break:break-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:38px}
+.fmeta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px}
+.factions{display:flex;gap:8px;margin-top:auto;padding-top:6px}
+.factions .btn.primary{flex:1}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+
+/* ---------- Geçmiş ---------- */
+.hstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.hstat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.hstat span{font-size:13px;color:var(--muted)}
+.hstat b{display:block;font-size:22px}
+.hlist{display:grid;gap:8px}
+.hrow{display:grid;grid-template-columns:56px minmax(0,1fr) auto auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px}
+.hrow img,.hrow .ph-img{width:56px;height:56px;border-radius:8px;background:var(--panel2);object-fit:contain}
+.hname{font-weight:600;word-break:break-all;font-size:14px}
+.hmeta{font-size:13px;color:var(--muted)}
+.tag{padding:3px 10px;border-radius:999px;font-size:12px;font-weight:650;white-space:nowrap}
+.tag.ok{background:var(--accent-soft);color:var(--accent)}
+.tag.no{background:var(--warn-soft);color:var(--warn)}
+
+/* ---------- Bakım ---------- */
+.mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px;align-items:start}
+.console{background:#0f0f11;border:1px solid var(--line);border-radius:10px;font:12.5px/1.6 ui-monospace,"Cascadia Mono",Consolas,monospace;color:#c9c9cf;height:260px;overflow:auto;padding:10px 12px;white-space:pre-wrap;margin:0 0 10px}
+.console .t{color:var(--faint)}
+.form-row{display:flex;gap:8px;flex-wrap:wrap}
+.form-row input{flex:1;min-width:160px}
+
+/* ---------- Pencere ve bildirim ---------- */
+.modal{position:fixed;inset:0;z-index:var(--z-modal);background:rgba(8,8,10,.7);display:none;place-items:center;padding:16px}
+.modal.show{display:grid}
+.dialog{width:min(520px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.5);max-height:calc(100vh - 32px);overflow:auto}
+.dialog h3{margin:0 0 12px;font-size:18px}
+.dialog .body{color:var(--muted);margin-bottom:18px}
+.dialog .acts{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.pjob{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;margin-bottom:14px}
+.pjob img,.pjob .ph-img{width:120px;height:120px;border-radius:10px;background:var(--panel2);object-fit:contain}
+.pjob dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px}
+.pjob dt{color:var(--muted)}
+.pjob dd{margin:0}
+.check{display:flex;gap:10px;align-items:flex-start;background:var(--panel2);border-radius:10px;padding:10px 12px;margin-bottom:16px;cursor:pointer;color:var(--text)}
+.check input{width:18px;height:18px;accent-color:var(--accent);margin-top:2px;flex:none}
+.toasts{position:fixed;right:16px;bottom:16px;z-index:var(--z-toast);display:grid;gap:8px;max-width:min(380px,calc(100vw - 32px))}
+.toast{display:flex;gap:10px;align-items:flex-start;background:var(--panel3);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.4);font-size:14px;animation:tin .2s ease-out}
+.toast.bad{border-left-color:var(--danger)}
+.toast.warn{border-left-color:var(--warn)}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ---------- Duyarlı ---------- */
+@media (max-width:1180px){.ctl{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){
+  :root{--rail:0px}
+  .rail{inset:auto 0 0 0;width:100%;height:64px;flex-direction:row;justify-content:space-around;padding:0 4px;border-right:0;border-top:1px solid var(--line)}
+  .logo{display:none}
+  .nav{min-height:56px;width:auto;flex:1}
+  .main{margin-left:0;padding-bottom:64px}
+  .content{padding:14px}
+  .topbar{padding:10px 14px}
+  .temps{grid-template-columns:minmax(0,1fr)}
+  .jstats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .job{grid-template-columns:72px minmax(0,1fr)}
+  .job-thumb{width:72px;height:72px}
+  .motion{grid-template-columns:auto}
+  .tune-row{grid-template-columns:70px minmax(0,1fr) auto}
+  .hstats{grid-template-columns:minmax(0,1fr)}
+  .hrow{grid-template-columns:48px minmax(0,1fr);}
+  .hrow img,.hrow .ph-img{width:48px;height:48px}
+  .hrow .tag,.hrow .btn{grid-column:2;justify-self:start}
+  .toasts{bottom:76px}
+  .fgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+}
+</style>
+</head>
+<body>
+
+<!-- Simgeler -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-logo" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h10"/><path d="M12 7v3"/><path d="M10 10h4l-2 3z"/><path d="M7 17h10"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-nozzle" viewBox="0 0 24 24"><path d="M7 3h10v6H7z"/><path d="M9.5 9h5v4L12 17l-2.5-4z"/><path d="M12 19.5v1.5"/></symbol>
+  <symbol id="i-bed" viewBox="0 0 24 24"><path d="M2 18h20"/><path d="M4 18v3"/><path d="M20 18v3"/><path d="M7 14c0-2 2-2 2-4s-2-2-2-4"/><path d="M12 14c0-2 2-2 2-4s-2-2-2-4"/><path d="M17 14c0-2 2-2 2-4s-2-2-2-4"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></symbol>
+  <symbol id="i-fan" viewBox="0 0 24 24"><path d="M10.83 16.38a6.08 6.08 0 0 1-8.62-7l5.41 1.45a6.08 6.08 0 0 1 7-8.62l-1.45 5.41a6.08 6.08 0 0 1 8.62 7l-5.41-1.45a6.08 6.08 0 0 1-7 8.62l1.45-5.41Z"/><path d="M12 12v.01"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><path d="m16 13 5.22 3.48a.5.5 0 0 0 .78-.42V7.87a.5.5 0 0 0-.75-.43L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol>
+  <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-extrude" viewBox="0 0 24 24"><path d="M12 3v13"/><path d="m6 10 6 6 6-6"/><path d="M5 21h14"/></symbol>
+  <symbol id="i-retract" viewBox="0 0 24 24"><path d="m18 9-6-6-6 6"/><path d="M12 3v13"/><path d="M5 21h14"/></symbol>
+  <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><path d="M8 12h8"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/></symbol>
+  <symbol id="i-exclude" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m2 2 20 20"/></symbol>
+  <symbol id="i-cube" viewBox="0 0 24 24"><path d="M12 2.6 20.6 7.3 12 12 3.4 7.3Z"/><path fill-opacity=".72" d="M3.4 9.1 11.2 13.4V21.4L3.4 17Z"/><path fill-opacity=".5" d="M20.6 9.1 12.8 13.4V21.4L20.6 17Z"/></symbol>
+  <symbol id="i-gauge2" viewBox="0 0 24 24"><path d="M12 2v4"/><path d="m4.93 10.93 2.83 2.83"/><path d="M2 18h4"/><path d="M18 18h4"/><path d="m19.07 10.93-2.83 2.83"/><path d="M12 18a6 6 0 0 0-6-6"/></symbol>
+</svg>
+
+<div class="app">
+  <nav class="rail" aria-label="Bölümler">
+    <div class="logo" aria-hidden="true"><svg class="i lg"><use href="#i-logo"/></svg></div>
+    <button class="nav" data-view="control" aria-current="page"><svg class="i lg"><use href="#i-gauge"/></svg>Kontrol</button>
+    <button class="nav" data-view="files"><svg class="i lg"><use href="#i-folder"/></svg>Dosyalar</button>
+    <button class="nav" data-view="history"><svg class="i lg"><use href="#i-clock"/></svg>Geçmiş</button>
+    <button class="nav" data-view="maint"><svg class="i lg"><use href="#i-wrench"/></svg>Bakım</button>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="dev">
+        <span class="dev-name" id="devName">K1 Max</span>
+        <span class="chip" id="devModel">K1 Max</span>
+      </div>
+      <span class="pill" id="statePill"><span class="d"></span><span id="statePillText">Bağlı değil</span></span>
+      <span class="spacer"></span>
+      <button class="conn-btn" id="connBtn" title="Bağlantı ayarları"><span class="cdot" id="cdot"></span><span id="connText">Bağlı değil</span><svg class="i sm"><use href="#i-link"/></svg></button>
+    </header>
+
+    <div class="content">
+      <div id="alerts" role="status"></div>
+
+      <!-- ============ KONTROL ============ -->
+      <section class="view active" id="view-control" aria-label="Kontrol">
+        <div class="ctl">
+          <div class="col">
+            <div class="panel">
+              <div class="ph">
+                <svg class="i"><use href="#i-video"/></svg><h2>Kamera</h2><span class="spacer"></span>
+                <button class="btn sm ghost" id="camBtn">Kapat</button>
+              </div>
+              <div class="cam-wrap">
+                <div class="cam-empty" id="camEmpty">Kamera kapalı</div>
+                <img id="cam" alt="Yazıcının kamera görüntüsü">
+                <div class="cam-badge"><span class="chip num" id="camNoz">Nozul —</span><span class="chip num" id="camBed">Tabla —</span></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="job">
+                <img class="job-thumb" id="jobThumb" alt="">
+                <div style="min-width:0">
+                  <p class="job-name" id="jobName">Baskı yok</p>
+                  <div class="job-state" id="jobState">Yazıcı boşta</div>
+                  <div class="prog"><div class="bar"><div id="jobBar"></div></div><b class="num" id="jobPct">—</b></div>
+                </div>
+              </div>
+              <div class="jstats">
+                <div class="jstat"><span>Katman</span><b class="num" id="jLayer">—</b></div>
+                <div class="jstat"><span>Geçen</span><b class="num" id="jElapsed">—</b></div>
+                <div class="jstat"><span>Kalan</span><b class="num" id="jLeft">—</b></div>
+                <div class="jstat"><span>Bitiş</span><b class="num" id="jEta">—</b></div>
+              </div>
+              <div class="row">
+                <button class="btn" id="btnPause"><svg class="i fill"><use href="#i-pause"/></svg>Duraklat</button>
+                <button class="btn primary" id="btnResume"><svg class="i fill"><use href="#i-play"/></svg>Devam et</button>
+                <button class="btn danger" id="btnStop"><svg class="i fill"><use href="#i-stop"/></svg>Durdur</button>
+              </div>
+              <div class="tune">
+                <div>
+                  <div class="row" style="justify-content:space-between;margin-bottom:8px"><span class="lbl">Hız modu</span><span class="num" id="speedNow">—</span></div>
+                  <div class="seg" id="speedModes" role="group" aria-label="Hız modu">
+                    <button data-speed="50" aria-pressed="false">Sessiz %50</button>
+                    <button data-speed="100" aria-pressed="false">Standart %100</button>
+                    <button data-speed="130" aria-pressed="false">Spor %130</button>
+                    <button data-speed="160" aria-pressed="false">Çılgın %160</button>
+                  </div>
+                </div>
+                <div class="tune-row">
+                  <label class="lbl" for="speed">Özel hız</label>
+                  <input type="range" id="speed" min="10" max="300" step="5">
+                  <span class="val num" id="speedVal">—</span>
+                </div>
+                <div class="tune-row">
+                  <label class="lbl" for="flow">Akış</label>
+                  <input type="range" id="flow" min="50" max="150" step="1">
+                  <span class="val num" id="flowVal">—</span>
+                </div>
+                <div class="tune-row">
+                  <span class="lbl">Z ofseti</span>
+                  <div class="seg" role="group" aria-label="Z ofseti">
+                    <button data-z="-0.05">−0,05</button><button data-z="-0.01">−0,01</button><button data-z="+0.01">+0,01</button><button data-z="+0.05">+0,05</button>
+                  </div>
+                  <span class="val num" id="zoff">—</span>
+                </div>
+                <div class="row" style="justify-content:space-between">
+                  <span class="hint" style="margin:0">Eksi değer nozulu tablaya yaklaştırır.</span>
+                  <button class="btn sm" id="btnZSave">Z ofsetini kaydet</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel" id="xoPanel" hidden>
+              <div class="ph">
+                <svg class="i"><use href="#i-exclude"/></svg><h2>Nesneyi hariç tut</h2><span class="chip num xo-count" id="xoCount"></span><span class="spacer"></span>
+                <button class="btn sm ghost icon xo-fold" id="xoFold" aria-expanded="true" aria-controls="xoBody" aria-label="Bölümü daralt"><svg class="i"><use href="#i-down"/></svg></button>
+              </div>
+              <div id="xoBody">
+                <div class="xo-map">
+                  <svg id="xoSvg" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Tabla haritası, yukarıdan görünüm"></svg>
+                  <div class="xo-msg" id="xoMsg"></div>
+                </div>
+                <div class="xo-legend" aria-hidden="true">
+                  <span><i class="cur"></i>Şu an basılıyor</span><span><i></i>Nesne</span><span><i class="noz"></i>Nozul</span><span><i class="ex"></i>Hariç tutuldu</span>
+                </div>
+                <div class="xo-list" id="xoList"></div>
+                <p class="hint">Yukarıdan görünüm; tablanın ön kenarı altta. Bir nesneye dokunup baskıdan çıkarabilirsin: yazıcı o nesnenin kalan kısmını basmaz ve bu geri alınamaz.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="panel">
+              <div class="ph"><svg class="i"><use href="#i-nozzle"/></svg><h2>Sıcaklık</h2></div>
+              <div class="temps">
+                <div class="temp" id="tileNoz">
+                  <div class="temp-h"><svg class="i sm"><use href="#i-nozzle"/></svg>Nozul</div>
+                  <div class="temp-cur num"><span id="nozCur">—</span><small> °C</small></div>
+                  <div class="temp-tgt num" id="nozTgt">Kapalı</div>
+                  <div class="temp-set"><input type="number" id="nozIn" min="0" max="300" step="5" aria-label="Nozul hedef sıcaklığı"><button class="btn sm" id="nozSet">Ayarla</button></div>
+                </div>
+                <div class="temp" id="tileBed">
+                  <div class="temp-h"><svg class="i sm"><use href="#i-bed"/></svg>Tabla</div>
+                  <div class="temp-cur num"><span id="bedCur">—</span><small> °C</small></div>
+                  <div class="temp-tgt num" id="bedTgt">Kapalı</div>
+                  <div class="temp-set"><input type="number" id="bedIn" min="0" max="100" step="5" aria-label="Tabla hedef sıcaklığı"><button class="btn sm" id="bedSet">Ayarla</button></div>
+                </div>
+                <div class="temp">
+                  <div class="temp-h"><svg class="i sm"><use href="#i-box"/></svg>Kabin</div>
+                  <div class="temp-cur num"><span id="boxCur">—</span><small> °C</small></div>
+                  <div class="temp-tgt">Ölçüm</div>
+                </div>
+              </div>
+              <div class="row" style="margin-top:12px">
+                <div class="seg" role="group" aria-label="Hazır sıcaklıklar">
+                  <button data-pre="210,60">PLA</button><button data-pre="240,70">PETG</button><button data-pre="250,100">ABS</button>
+                </div>
+                <button class="btn sm ghost" data-pre="0,0">Isıtmayı kapat</button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="ph"><svg class="i"><use href="#i-fan"/></svg><h2>Fanlar ve ışık</h2></div>
+              <div class="fans">
+                <div class="fan"><label class="switch"><input type="checkbox" role="switch" data-fansw="0" aria-label="Model fanı"><span></span></label><div><div class="fan-name">Model fanı</div><input type="range" min="0" max="100" step="5" data-fan="0" aria-label="Model fanı hızı"></div><span class="fan-val num" id="fanVal0">—</span></div>
+                <div class="fan"><label class="switch"><input type="checkbox" role="switch" data-fansw="1" aria-label="Arka fan"><span></span></label><div><div class="fan-name">Arka fan</div><input type="range" min="0" max="100" step="5" data-fan="1" aria-label="Arka fan hızı"></div><span class="fan-val num" id="fanVal1">—</span></div>
+                <div class="fan"><label class="switch"><input type="checkbox" role="switch" data-fansw="2" aria-label="Yan fan"><span></span></label><div><div class="fan-name">Yan fan</div><input type="range" min="0" max="100" step="5" data-fan="2" aria-label="Yan fan hızı"></div><span class="fan-val num" id="fanVal2">—</span></div>
+                <div class="fan"><label class="switch"><input type="checkbox" role="switch" id="lightSw" aria-label="Işık"><span></span></label><div class="fan-name"><svg class="i sm"><use href="#i-bulb"/></svg>Işık</div><span></span></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="ph"><svg class="i"><use href="#i-home"/></svg><h2>Eksen kontrolü</h2><span class="spacer"></span>
+                <button class="btn sm ghost" id="btnMotorsOff" title="Motorları serbest bırak"><svg class="i sm"><use href="#i-unlock"/></svg>Motorları bırak</button>
+              </div>
+              <div class="homed" aria-label="Sıfırlanmış eksenler"><span class="axis" id="axX">X</span><span class="axis" id="axY">Y</span><span class="axis" id="axZ">Z</span></div>
+              <div class="motion">
+                <div class="pad">
+                  <button class="up" data-mv="Y+" aria-label="Y artı"><span><svg class="i"><use href="#i-up"/></svg>Y+</span></button>
+                  <button class="down" data-mv="Y-" aria-label="Y eksi"><span>Y−<svg class="i"><use href="#i-down"/></svg></span></button>
+                  <button class="left" data-mv="X-" aria-label="X eksi"><span><svg class="i"><use href="#i-left"/></svg>X−</span></button>
+                  <button class="right" data-mv="X+" aria-label="X artı"><span><svg class="i"><use href="#i-right"/></svg>X+</span></button>
+                  <button class="home" data-home="X Y" aria-label="X ve Y eksenlerini sıfırla" title="X ve Y'yi sıfırla"><svg class="i lg"><use href="#i-home"/></svg></button>
+                </div>
+                <div class="zcol">
+                  <button class="btn" data-mv="Z+" aria-label="Z artı, tabla aşağı"><svg class="i"><use href="#i-up"/></svg>Z+</button>
+                  <button class="btn" data-home="Z" aria-label="Z eksenini sıfırla"><svg class="i"><use href="#i-home"/></svg>Z</button>
+                  <button class="btn" data-mv="Z-" aria-label="Z eksi, tabla yukarı">Z−<svg class="i"><use href="#i-down"/></svg></button>
+                </div>
+              </div>
+              <div class="row" style="justify-content:space-between">
+                <div class="seg" id="steps" role="group" aria-label="Adım">
+                  <button data-step="0.1">0,1</button><button data-step="1">1</button><button data-step="10" aria-pressed="true">10</button><button data-step="50">50 mm</button>
+                </div>
+                <button class="btn sm" data-home="X Y Z"><svg class="i sm"><use href="#i-home"/></svg>Hepsini sıfırla</button>
+              </div>
+              <p class="hint">K1 Max'te Z+ tablayı aşağı indirir. Baskı sırasında hareket kapalıdır.</p>
+            </div>
+
+            <div class="panel">
+              <div class="ph"><svg class="i"><use href="#i-extrude"/></svg><h2>Ekstrüder</h2></div>
+              <div class="ext">
+                <div class="ext-row"><span class="lbl">Uzunluk</span>
+                  <div class="seg" id="eLens" role="group" aria-label="Uzunluk">
+                    <button data-elen="5">5</button><button data-elen="10" aria-pressed="true">10</button><button data-elen="20">20</button><button data-elen="50">50</button><button data-elen="100">100 mm</button>
+                  </div>
+                </div>
+                <div class="ext-row"><span class="lbl">Hız</span>
+                  <div class="seg" id="eSpeeds" role="group" aria-label="Hız">
+                    <button data-espd="2">2</button><button data-espd="5" aria-pressed="true">5</button><button data-espd="10">10 mm/sn</button>
+                  </div>
+                </div>
+                <div class="ext-row">
+                  <button class="btn primary" id="btnExtrude"><svg class="i"><use href="#i-extrude"/></svg>Filamenti it</button>
+                  <button class="btn" id="btnRetract"><svg class="i"><use href="#i-retract"/></svg>Geri çek</button>
+                </div>
+              </div>
+              <p class="hint" id="eHint">—</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ DOSYALAR ============ -->
+      <section class="view" id="view-files" aria-label="Dosyalar">
+        <div class="toolbar">
+          <label class="search"><svg class="i"><use href="#i-search"/></svg><input type="search" id="fSearch" placeholder="Dosya ara" aria-label="Dosya ara"></label>
+          <select id="fSort" aria-label="Sıralama">
+            <option value="date">En yeni</option>
+            <option value="name">Ada göre</option>
+            <option value="time">Süreye göre</option>
+          </select>
+          <span class="spacer"></span>
+          <span class="muted num" id="fCount"></span>
+          <button class="btn" id="btnRefresh"><svg class="i"><use href="#i-refresh"/></svg>Yenile</button>
+          <button class="btn primary" id="btnUpload"><svg class="i"><use href="#i-upload"/></svg>Dosya yükle</button>
+          <input type="file" id="fileInput" accept=".gcode" hidden>
+        </div>
+        <div class="panel upbar" id="upbar"><svg class="i"><use href="#i-upload"/></svg><span id="upName" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><div class="bar" style="flex:1"><div id="upBarFill"></div></div><b class="num" id="upPct">%0</b></div>
+        <p class="hint" style="margin:-6px 0 14px">.gcode dosyasını bu sayfanın üzerine sürükleyip bırakarak da yükleyebilirsin.</p>
+        <div class="fgrid" id="fgrid"></div>
+        <div class="empty" id="fEmpty" hidden>Dosya yok.</div>
+      </section>
+
+      <!-- ============ GEÇMİŞ ============ -->
+      <section class="view" id="view-history" aria-label="Geçmiş">
+        <div class="hstats">
+          <div class="hstat"><span>Toplam baskı</span><b class="num" id="hTotal">—</b></div>
+          <div class="hstat"><span>Toplam süre</span><b class="num" id="hTime">—</b></div>
+          <div class="hstat"><span>Kullanılan filament</span><b class="num" id="hMat">—</b></div>
+        </div>
+        <div class="toolbar"><span class="spacer"></span><button class="btn" id="btnHistRefresh"><svg class="i"><use href="#i-refresh"/></svg>Yenile</button></div>
+        <div class="hlist" id="hlist"></div>
+        <div class="empty" id="hEmpty" hidden>Geçmiş kaydı yok.</div>
+      </section>
+
+      <!-- ============ BAKIM ============ -->
+      <section class="view" id="view-maint" aria-label="Bakım">
+        <div class="mgrid">
+          <div class="panel">
+            <div class="ph"><svg class="i"><use href="#i-link"/></svg><h2>Bağlantı</h2></div>
+            <label class="lbl" for="ip">Yazıcının IP adresi</label>
+            <div class="form-row" style="margin-top:6px">
+              <input type="text" id="ip" inputmode="decimal" autocomplete="off">
+              <button class="btn primary" id="btnConnect">Bağlan</button>
+            </div>
+            <p class="hint">Bilgisayar ve yazıcı aynı ağda olmalı.</p>
+          </div>
+          <div class="panel">
+            <div class="ph"><svg class="i"><use href="#i-power"/></svg><h2>Yeniden başlatma</h2></div>
+            <p class="hint" style="margin:0 0 12px">Yazıcı takıldığında ya da hata verdiğinde kullan. Süren bir baskı varsa durur.</p>
+            <div class="row">
+              <button class="btn danger" id="btnRestart"><svg class="i"><use href="#i-power"/></svg>Yazıcı yazılımını yeniden başlat</button>
+              <button class="btn" id="btnCleanErr">Hatayı temizle</button>
+            </div>
+          </div>
+          <div class="panel" style="grid-column:1/-1">
+            <div class="ph"><svg class="i"><use href="#i-terminal"/></svg><h2>Konsol</h2><span class="spacer"></span><button class="btn sm ghost" id="btnLogClear">Temizle</button></div>
+            <pre class="console" id="log" aria-live="polite"></pre>
+            <div class="form-row">
+              <input type="text" id="gcode" placeholder="G-code yaz, ör. M84" aria-label="G-code" autocomplete="off" spellcheck="false">
+              <button class="btn" id="btnGcode">Gönder</button>
+            </div>
+            <p class="hint">Ne yaptığını bildiğin komutları gönder. Baskı sırasında hareket komutu baskıyı bozabilir.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="drop" id="drop"><div><svg class="i lg" style="width:40px;height:40px"><use href="#i-upload"/></svg>Yazıcıya yüklemek için bırak</div></div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="dialog">
+    <h3 id="mTitle"></h3>
+    <div class="body" id="mBody"></div>
+    <div class="acts"><button class="btn" id="mCancel">Vazgeç</button><button class="btn primary" id="mOk">Tamam</button></div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Yazıcının kendi web sayfasındaki durum numaraları:
+  // 0 durdu, 1 yazdırıyor, 2 bitti, 3 başarısız, 4 iptal, 5 duraklatıldı; 9 başlarken bir anlık.
+  var STATE = {
+    0: ["Hazır", "ok"], 1: ["Yazdırıyor", "ok"], 2: ["Hazır · son baskı bitti", "ok"],
+    3: ["Hazır · son baskı başarısız", "warn"], 4: ["Hazır · son baskı iptal edildi", "warn"],
+    5: ["Duraklatıldı", "warn"], 9: ["Başlıyor…", "ok"]
+  };
+  var BUSY = { 1: true, 5: true, 9: true };
+  var MIN_EXTRUDE_TEMP = 180;
+  var FAN_KEYS = [["fan", "modelFanPct"], ["fanCase", "caseFanPct"], ["fanAuxiliary", "auxiliaryFanPct"]];
+  var FAN_NAMES = ["Model fanı", "Arka fan", "Yan fan"];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var all = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
+  var ws = null, st = {}, files = [], history = null, retryTimer = null, paraTimer = null;
+  var view = "control", step = "10", eLen = 10, eSpd = 5, alertSig = "", lastJobFile = "";
+
+  // ---------- Saklama ----------
+  function lsGet(k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  var camOn = lsGet("k1cam", "1") === "1";
+
+  // ---------- Biçimleme ----------
+  function ip() { return $("ip").value.trim(); }
+  function base() { return "http://" + ip(); }
+  function fmtDur(sec) {
+    sec = Math.max(0, Math.round(+sec || 0));
+    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+    return h > 0 ? h + " sa " + m + " dk" : m + " dk";
+  }
+  function fmtClock(d) { return d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }); }
+  function fmtDate(sec) { return new Date(sec * 1000).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" }); }
+  function num(v) { var n = parseFloat(v); return isNaN(n) ? null : n; }
+  function baseName(p) { return p ? String(p).split("/").pop() : ""; }
+  function thumbUrl(f) { var t = baseName(f && f.thumbnail); return t ? base() + "/downloads/humbnail/" + encodeURIComponent(t) : ""; }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function icon(name, cls) {
+    var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.setAttribute("class", "i" + (cls ? " " + cls : ""));
+    var u = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    u.setAttribute("href", "#i-" + name);
+    s.appendChild(u);
+    return s;
+  }
+  function setVal(input, v) { if (document.activeElement !== input && v !== undefined && v !== null && v !== "") input.value = v; }
+
+  // ---------- Kayıt ve bildirim ----------
+  function log(msg) {
+    var box = $("log");
+    var line = el("div");
+    line.appendChild(el("span", "t", new Date().toLocaleTimeString("tr-TR") + "  "));
+    line.appendChild(document.createTextNode(msg));
+    box.insertBefore(line, box.firstChild);
+    while (box.childNodes.length > 300) box.removeChild(box.lastChild);
+  }
+  function toast(msg, kind) {
+    var t = el("div", "toast" + (kind ? " " + kind : ""));
+    t.appendChild(el("span", "", msg));
+    $("toasts").appendChild(t);
+    setTimeout(function () { t.remove(); }, kind === "bad" ? 6000 : 3200);
+  }
+
+  // ---------- Pencere ----------
+  var modalResolve = null;
+  function ask(opts) {
+    $("mTitle").textContent = opts.title;
+    var body = $("mBody");
+    body.textContent = "";
+    if (opts.node) body.appendChild(opts.node); else body.textContent = opts.text || "";
+    var ok = $("mOk");
+    ok.textContent = opts.ok || "Tamam";
+    ok.className = "btn " + (opts.danger ? "danger" : "primary");
+    ok.disabled = !!opts.needCheck;
+    $("modal").classList.add("show");
+    setTimeout(function () { (opts.needCheck ? $("mCancel") : ok).focus(); }, 30);
+    return new Promise(function (res) { modalResolve = res; });
+  }
+  function closeModal(v) {
+    $("modal").classList.remove("show");
+    if (modalResolve) { var r = modalResolve; modalResolve = null; r(v); }
+  }
+  $("mOk").onclick = function () { closeModal(true); };
+  $("mCancel").onclick = function () { closeModal(false); };
+  $("modal").addEventListener("click", function (e) { if (e.target === $("modal")) closeModal(false); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && $("modal").classList.contains("show")) closeModal(false); });
+
+  // ---------- Bağlantı ----------
+  function connect() {
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} ws = null; }
+    var addr = ip();
+    if (!addr) return;
+    lsSet("k1ip", addr);
+    setConn(false, "Bağlanıyor…");
+    try { ws = new WebSocket("ws://" + addr + ":9999"); } catch (e) { setConn(false, "Adres hatalı"); return; }
+    ws.onopen = function () {
+      setConn(true, addr);
+      log("Yazıcıya bağlanıldı: " + addr);
+      requestFiles();
+      requestPara();
+      if (paraTimer) clearInterval(paraTimer);
+      paraTimer = setInterval(function () { requestPara(); pollObjects(); }, 5000);
+      if (view === "history") requestHistory();
+      applyCam();
+    };
+    ws.onmessage = function (ev) { onMessage(ev.data); };
+    ws.onclose = function () {
+      if (paraTimer) { clearInterval(paraTimer); paraTimer = null; }
+      setConn(false, "Bağlantı koptu");
+      retryTimer = setTimeout(connect, 3000);
+    };
+    ws.onerror = function () {};
+  }
+  function setConn(on, text) {
+    $("cdot").classList.toggle("on", on);
+    $("connText").textContent = text;
+    render();
+  }
+  function isOpen() { return ws && ws.readyState === 1; }
+  function sendRaw(obj) {
+    if (!isOpen()) { toast("Yazıcıya bağlı değil.", "bad"); return false; }
+    ws.send(JSON.stringify(obj));
+    return true;
+  }
+  function sendSet(params, label, quiet) {
+    if (!sendRaw({ method: "set", params: params })) return false;
+    log((label || "Komut") + " → " + JSON.stringify(params));
+    if (!quiet && label) toast(label);
+    return true;
+  }
+  function gcode(cmd, label, quiet) { return sendSet({ gcodeCmd: cmd }, label, quiet); }
+  function requestFiles() { sendRaw({ method: "get", params: { reqGcodeFile: 1 } }); }
+  function requestPara() { if (isOpen()) ws.send(JSON.stringify({ method: "get", params: { ReqPrinterPara: 1 } })); }
+  function requestHistory() { if (isOpen()) ws.send(JSON.stringify({ method: "get", params: { reqHistory: 1 } })); }
+
+  function onMessage(data) {
+    if (typeof data !== "string") return;
+    if (data.indexOf("heart_beat") !== -1) { try { ws.send("ok"); } catch (e) {} return; }
+    var d;
+    try { d = JSON.parse(data); } catch (e) { return; }
+    if (!d || typeof d !== "object") return;
+    if (Array.isArray(d.retGcodeFileInfo2)) { files = d.retGcodeFileInfo2; renderFiles(); }
+    if (Array.isArray(d.historyList)) {
+      history = { list: d.historyList, totalJob: d.totalJob, totalUsageTime: d.totalUsageTime, totalUsageMaterial: d.totalUsageMaterial };
+      renderHistory();
+    }
+    var prev = st.state;
+    var wasBusy = !!BUSY[+prev];
+    var nowBusy = d.state !== undefined ? !!BUSY[+d.state] : wasBusy;
+    var newFile = d.printFileName !== undefined && d.printFileName !== st.printFileName;
+    if (newFile || nowBusy !== wasBusy) clearObjects();
+    for (var k in d) {
+      if (k === "retGcodeFileInfo2" || k === "historyList") continue;
+      st[k] = d[k];
+    }
+    if (d.objects !== undefined || d.excluded_objects !== undefined) { xoReplied = true; xoAsks = 0; }
+    if (nowBusy && (newFile || !wasBusy)) requestObjects();
+    if (d.state !== undefined && prev !== undefined && d.state !== prev) {
+      var s = STATE[d.state];
+      log("Durum: " + (s ? s[0] : "kod " + d.state));
+      if (d.state === 2) toast("Baskı bitti.");
+      if (d.state === 3) toast("Baskı başarısız oldu.", "bad");
+      if (prev !== 2 && prev !== 3 && prev !== 4 && (d.state === 2 || d.state === 4)) requestHistory();
+    }
+    render();
+  }
+
+  // ---------- Durum yardımcıları ----------
+  function sNow() { return +st.state; }
+  function busy() { return !!BUSY[sNow()]; }
+  function homed() {
+    var h = { X: false, Y: false, Z: false };
+    if (typeof st.autohome === "string") st.autohome.split(" ").forEach(function (p) {
+      var kv = p.split(":"); if (kv.length === 2 && h.hasOwnProperty(kv[0])) h[kv[0]] = kv[1] === "1";
+    });
+    return h;
+  }
+  function nozNow() { return num(st.nozzleTemp) || 0; }
+
+  // ---------- Ekran ----------
+  function render() {
+    var open = isOpen(), s = sNow(), b = busy();
+    var info = STATE[s] || (st.state !== undefined ? ["Bilinmeyen durum (" + s + ")", "warn"] : ["—", ""]);
+    var stTxt = info[0];
+    var selfTest = +st.withSelfTest;
+    if (s === 1 && selfTest > 0 && selfTest < 100) stTxt = "Kalibrasyon yapıyor %" + selfTest;
+    if (+st.err && +st.err.errcode) info = [stTxt, "bad"];
+
+    // Üst çubuk
+    $("devName").textContent = st.hostname || "K1 Max";
+    $("devModel").textContent = st.model || "K1 Max";
+    var pill = $("statePill");
+    pill.className = "pill " + (open ? info[1] : "bad");
+    $("statePillText").textContent = open ? stTxt : "Bağlı değil";
+
+    // Kamera rozetleri
+    $("camNoz").textContent = "Nozul " + tempTxt(st.nozzleTemp);
+    $("camBed").textContent = "Tabla " + tempTxt(st.bedTemp0);
+
+    renderJob(open, s, b, stTxt);
+    renderObjects(open, b);
+    renderTemps(open);
+    renderTune(open);
+    renderFans(open);
+    renderMotion(open, b);
+    renderExtruder(open, s);
+    renderAlerts(open);
+    renderFileButtons();
+
+    $("btnRefresh").disabled = !open;
+    $("btnUpload").disabled = !open;
+    $("btnHistRefresh").disabled = !open;
+    $("btnGcode").disabled = !open;
+    $("btnRestart").disabled = !open;
+    $("btnCleanErr").disabled = !open;
+  }
+  function tempTxt(v) { var n = num(v); return n === null ? "—" : n.toFixed(0) + " °C"; }
+
+  function renderJob(open, s, b, stTxt) {
+    var fname = baseName(st.printFileName);
+    var prog = +st.printProgress || 0;
+    $("jobName").textContent = b && fname ? fname : (open ? "Baskı yok" : "Bağlı değil");
+    $("jobState").textContent = open ? stTxt : "Yazıcıya bağlanılamadı";
+    $("jobBar").style.width = (b ? prog : 0) + "%";
+    $("jobPct").textContent = b ? "%" + prog : "—";
+    $("jLayer").textContent = b && +st.TotalLayer > 0 ? st.layer + " / " + st.TotalLayer : "—";
+    $("jElapsed").textContent = b ? fmtDur(st.printJobTime) : "—";
+    $("jLeft").textContent = b ? fmtDur(st.printLeftTime) : "—";
+    $("jEta").textContent = b && +st.printLeftTime > 0 ? fmtClock(new Date(Date.now() + st.printLeftTime * 1000)) : "—";
+
+    var key = b ? String(st.printFileName) : "";
+    if (key !== lastJobFile) {
+      lastJobFile = key;
+      var img = $("jobThumb");
+      if (key) {
+        var f = files.filter(function (x) { return x.path === key; })[0];
+        var fallback = f ? thumbUrl(f) : "";
+        img.onerror = function () { img.onerror = null; if (fallback) img.src = fallback; else img.removeAttribute("src"); };
+        img.src = base() + "/downloads/original/current_print_image.png?t=" + Date.now();
+      } else {
+        img.removeAttribute("src");
+      }
+    }
+    $("btnPause").disabled = !open || s !== 1;
+    $("btnResume").disabled = !open || s !== 5;
+    $("btnStop").disabled = !open || !b;
+  }
+
+  function renderTemps(open) {
+    var n = num(st.nozzleTemp), bd = num(st.bedTemp0);
+    $("nozCur").textContent = n === null ? "—" : n.toFixed(0);
+    $("bedCur").textContent = bd === null ? "—" : bd.toFixed(0);
+    $("boxCur").textContent = st.boxTemp !== undefined ? st.boxTemp : "—";
+    var tn = +st.targetNozzleTemp || 0, tb = +st.targetBedTemp0 || 0;
+    $("nozTgt").textContent = tn > 0 ? "Hedef " + tn + " °C" : "Kapalı";
+    $("bedTgt").textContent = tb > 0 ? "Hedef " + tb + " °C" : "Kapalı";
+    $("tileNoz").classList.toggle("heating", tn > 0 && n !== null && Math.abs(n - tn) > 3);
+    $("tileBed").classList.toggle("heating", tb > 0 && bd !== null && Math.abs(bd - tb) > 2);
+    $("nozIn").placeholder = tn > 0 ? String(tn) : "°C";
+    $("bedIn").placeholder = tb > 0 ? String(tb) : "°C";
+    all("#nozSet,#bedSet,[data-pre]").forEach(function (x) { x.disabled = !open; });
+  }
+
+  function renderTune(open) {
+    var sp = +st.curFeedratePct;
+    setVal($("speed"), st.curFeedratePct);
+    setVal($("flow"), st.curFlowratePct);
+    $("speedVal").textContent = "%" + $("speed").value;
+    $("flowVal").textContent = "%" + $("flow").value;
+    $("speedNow").textContent = st.curFeedratePct !== undefined ? "Şu an %" + sp : "—";
+    all("[data-speed]").forEach(function (x) { x.setAttribute("aria-pressed", String(+x.getAttribute("data-speed") === sp)); x.disabled = !open; });
+    $("zoff").textContent = st.curZOffset !== undefined ? (+st.curZOffset).toFixed(3) : "—";
+    $("speed").disabled = !open; $("flow").disabled = !open;
+    all("[data-z]").forEach(function (x) { x.disabled = !open; });
+    $("btnZSave").disabled = !open;
+  }
+
+  function renderFans(open) {
+    for (var i = 0; i < 3; i++) {
+      var on = +st[FAN_KEYS[i][0]] === 1, pct = +st[FAN_KEYS[i][1]] || 0;
+      var sw = document.querySelector('[data-fansw="' + i + '"]');
+      var r = document.querySelector('[data-fan="' + i + '"]');
+      if (document.activeElement !== sw) sw.checked = on;
+      setVal(r, on ? pct : 0);
+      $("fanVal" + i).textContent = "%" + r.value;
+      sw.disabled = !open; r.disabled = !open;
+    }
+    var ls = $("lightSw");
+    if (document.activeElement !== ls) ls.checked = +st.lightSw === 1;
+    ls.disabled = !open;
+  }
+
+  function renderMotion(open, b) {
+    var h = homed();
+    ["X", "Y", "Z"].forEach(function (a) { $("ax" + a).classList.toggle("on", h[a]); $("ax" + a).title = h[a] ? a + " sıfırlı" : a + " sıfırlı değil"; });
+    all("[data-home]").forEach(function (x) { x.disabled = !open || b; });
+    all("[data-mv]").forEach(function (x) { x.disabled = !open || b || !h[x.getAttribute("data-mv")[0]]; });
+    $("btnMotorsOff").disabled = !open || b;
+  }
+
+  function renderExtruder(open, s) {
+    var hot = nozNow() >= MIN_EXTRUDE_TEMP;
+    var printing = s === 1 || s === 9;
+    var ok = open && hot && !printing;
+    $("btnExtrude").disabled = !ok;
+    $("btnRetract").disabled = !ok;
+    $("eHint").textContent = !open ? "Yazıcıya bağlı değil." :
+      printing ? "Baskı sürerken filament sürülemez. Duraklatınca açılır." :
+      !hot ? "Nozul " + nozNow().toFixed(0) + " °C. Filament sürmek için en az " + MIN_EXTRUDE_TEMP + " °C gerekli; önce ısıt." :
+      "Hazır. Filament çıkarırken önce 10 mm it, sonra 50–100 mm geri çek.";
+  }
+
+  function renderAlerts(open) {
+    var err = st.err || {};
+    var sig = open ? [+st.materialStatus, +st.repoPlrStatus, +err.errcode, err.value].join("|") : "";
+    if (sig === alertSig) return;
+    alertSig = sig;
+    var box = $("alerts");
+    box.textContent = "";
+    if (!open) return;
+    if (+st.materialStatus) box.appendChild(alertBox("Filament algılanmadı. Filamenti takıp devam edebilirsin.", false, [
+      ["Devam et", "primary", function () { sendSet({ pause: 0 }, "Filament uyarısı: devam"); }],
+      ["Vazgeç", "", function () { sendSet({ stop: 0 }, "Filament uyarısı: vazgeç"); }]
+    ]));
+    if (+st.repoPlrStatus) box.appendChild(alertBox("Yarıda kalmış bir baskı bulundu. Elektrik kesintisi olmuş olabilir.", false, [
+      ["Kaldığı yerden devam", "primary", function () { sendSet({ repoPlrStatus: 1 }, "Yarıda kalan baskı: devam"); }],
+      ["İptal et", "", function () { sendSet({ repoPlrStatus: 0 }, "Yarıda kalan baskı: iptal"); }]
+    ]));
+    if (+err.errcode) box.appendChild(alertBox("Yazıcı hata bildiriyor: kod " + err.errcode + (err.value ? " · " + err.value : ""), true, [
+      ["Hatayı temizle", "primary", function () { sendSet({ cleanErr: 1 }, "Hata temizlendi"); }]
+    ]));
+  }
+  function alertBox(msg, bad, actions) {
+    var d = el("div", "alert" + (bad ? " bad" : ""));
+    d.appendChild(icon("alert", "lg"));
+    d.appendChild(el("p", "", msg));
+    actions.forEach(function (a) {
+      var btn = el("button", "btn sm " + a[1], a[0]);
+      btn.onclick = a[2];
+      d.appendChild(btn);
+    });
+    return d;
+  }
+
+  // ---------- Nesneyi hariç tut ----------
+  // Yazıcı nesneleri JSON dizesi olarak verir (reqPrintObjects): [{name, center:[x,y], polygon:[[x,y],…]}].
+  // Hariç tutmak için {excludeObjects:[ad]} gönderilir. Dilimleyicide "Nesneleri etiketle" açık olmalı.
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var CUBE = 14;
+  var xoOpen = lsGet("k1xo", "1") === "1";
+  var xoAsks = 0, xoReplied = false, xoRaw = null, xoObjs = [], xoLast = null, xoNodes = [], xoRows = [], xoNoz = null, xoGeo = null;
+
+  function fin(v) { return typeof v === "number" && isFinite(v); }
+  function sv(tag, attrs, cls) {
+    var e = document.createElementNS(SVGNS, tag);
+    if (cls) e.setAttribute("class", cls);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function parseList(raw) {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw !== "string") return [];
+    try { var v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  }
+  function xoObjects() {
+    if (st.objects === xoRaw) return xoObjs;
+    xoRaw = st.objects;
+    xoObjs = [];
+    parseList(xoRaw).forEach(function (o) {
+      if (!o || typeof o.name !== "string" || !o.name) return;
+      var poly = [];
+      if (Array.isArray(o.polygon)) o.polygon.forEach(function (p) { if (Array.isArray(p) && fin(p[0]) && fin(p[1])) poly.push([p[0], p[1]]); });
+      var c = Array.isArray(o.center) && fin(o.center[0]) && fin(o.center[1]) ? [o.center[0], o.center[1]] : null;
+      if (!c && poly.length) {
+        var xs = poly.map(function (p) { return p[0]; }), ys = poly.map(function (p) { return p[1]; });
+        c = [(Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2, (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2];
+      }
+      xoObjs.push({ name: o.name, center: c, poly: poly });
+    });
+    return xoObjs;
+  }
+  function xoExcluded() {
+    var s = Object.create(null);
+    parseList(st.excluded_objects).forEach(function (n) { if (typeof n === "string") s[n] = true; });
+    return s;
+  }
+  // "ADI.STL_ID_0_COPY_2" → ad ve kopya numarası
+  function xoLabels(objs) {
+    var count = Object.create(null);
+    var parts = objs.map(function (o) {
+      var m = /^(.*?)(?:\.(?:stl|3mf|obj|stp|step))?_ID_(\d+)_COPY_(\d+)$/i.exec(o.name);
+      var p = m ? { base: m[1], copy: +m[3] } : { base: o.name, copy: 0 };
+      count[p.base] = (count[p.base] || 0) + 1;
+      return p;
+    });
+    return parts.map(function (p) {
+      var t = p.base.replace(/_/g, " ").replace(/\s+/g, " ").trim() || "Nesne";
+      return count[p.base] > 1 ? t + " · kopya " + (p.copy + 1) : t;
+    });
+  }
+  function bedSize() { return /max/i.test(String(st.model || "")) ? 300 : 220; }
+
+  function requestObjects() { if (!isOpen()) return; xoAsks++; ws.send(JSON.stringify({ method: "get", params: { reqPrintObjects: 1 } })); }
+  function pollObjects() {
+    if (!isOpen() || !busy()) return;
+    if (xoReplied ? (!xoOpen || view !== "control") : xoAsks > 12) return;
+    requestObjects();
+  }
+  // Yeni baskıda önceki baskının nesne listesi ve hariç tutulanlar kalmasın
+  function clearObjects() { delete st.objects; delete st.excluded_objects; delete st.current_object; xoAsks = 0; xoReplied = false; }
+
+  function renderObjects(open, b) {
+    var panel = $("xoPanel");
+    panel.hidden = !(open && b);
+    if (panel.hidden) return;
+    var objs = xoObjects(), ex = xoExcluded(), cur = st.current_object ? String(st.current_object) : "";
+    var nex = objs.filter(function (o) { return ex[o.name]; }).length;
+    $("xoCount").textContent = objs.length ? objs.length + " nesne" + (nex ? " · " + nex + " hariç" : "") : "";
+    $("xoFold").setAttribute("aria-expanded", String(xoOpen));
+    $("xoFold").setAttribute("aria-label", xoOpen ? "Bölümü daralt" : "Bölümü genişlet");
+    panel.classList.toggle("xo-closed", !xoOpen);
+    $("xoBody").hidden = !xoOpen;
+    if (!xoOpen) return;
+    var kind = objs.length ? "ok" : (xoReplied || xoAsks >= 3 ? "none" : "wait");
+    // Haritayı yalnız liste değişince baştan kur; "şu an basılıyor" her katmanda değişebilir, yerinde güncellenir
+    // (aksi halde süren bir tıklama ya da klavye odağı kaybolur)
+    var key = [st.printFileName, st.objects, st.excluded_objects, st.model, kind];
+    if (!xoLast || key.some(function (v, i) { return v !== xoLast[i]; })) { xoLast = key; buildObjects(objs, ex, kind); }
+    updateCurrent(objs, cur);
+    updateNozzle();
+  }
+
+  function updateCurrent(objs, cur) {
+    objs.forEach(function (o, i) {
+      var r = xoRows[i];
+      if (!r) return;
+      var isCur = !r.ex && o.name === cur;
+      if (xoNodes[i]) xoNodes[i].classList.toggle("cur", isCur);
+      r.row.classList.toggle("cur", isCur);
+      r.small.textContent = r.ex ? "Hariç tutuldu" : isCur ? "Şu an basılıyor" : "";
+    });
+  }
+
+  function buildObjects(objs, ex, kind) {
+    var bed = bedSize(), x0 = 0, y0 = 0, x1 = bed, y1 = bed, M = 12;
+    objs.forEach(function (o) {
+      (o.center ? o.poly.concat([o.center]) : o.poly).forEach(function (p) {
+        x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]);
+      });
+    });
+    x0 = Math.floor(x0 / 10) * 10; y0 = Math.floor(y0 / 10) * 10; x1 = Math.ceil(x1 / 10) * 10; y1 = Math.ceil(y1 / 10) * 10;
+    var w = x1 - x0, h = y1 - y0;
+    function tx(x) { return +(x - x0).toFixed(2); }
+    function ty(y) { return +(y1 - y).toFixed(2); }   // yazıcıda Y=0 ön kenar; haritada ön altta
+    xoGeo = { x0: x0, y1: y1 };
+
+    var svg = $("xoSvg");
+    svg.textContent = "";
+    svg.setAttribute("viewBox", (-M) + " " + (-M) + " " + (w + 2 * M) + " " + (h + 2 * M));
+    svg.appendChild(sv("rect", { x: 0, y: 0, width: w, height: h }, "xo-bed"));
+    var minor = "", major = "", gx, gy;
+    for (gx = x0; gx <= x1; gx += 10) { var vl = "M" + tx(gx) + " 0V" + h; if (gx % 50 === 0) major += vl; else minor += vl; }
+    for (gy = y0; gy <= y1; gy += 10) { var hl = "M0 " + ty(gy) + "H" + w; if (gy % 50 === 0) major += hl; else minor += hl; }
+    svg.appendChild(sv("path", { d: minor }, "xo-grid"));
+    svg.appendChild(sv("path", { d: major }, "xo-grid major"));
+    for (gx = x0; gx <= x1; gx += 50) if (gx % 50 === 0) { var tt = sv("text", { x: tx(gx), y: h + 8, "text-anchor": "middle" }, "xo-tick"); tt.textContent = gx; svg.appendChild(tt); }
+    for (gy = y0; gy <= y1; gy += 50) if (gy % 50 === 0) { var tl = sv("text", { x: -3, y: ty(gy) + 2, "text-anchor": "end" }, "xo-tick"); tl.textContent = gy; svg.appendChild(tl); }
+
+    var labels = xoLabels(objs), list = $("xoList");
+    list.textContent = "";
+    xoNodes = []; xoRows = [];
+    objs.forEach(function (o, i) {
+      var isEx = !!ex[o.name], label = labels[i];
+      if (o.center) {
+        var g = sv("g", {}, "xo-obj" + (isEx ? " ex" : ""));
+        var title = sv("title", {}); title.textContent = label + (isEx ? " · hariç tutuldu" : "");
+        g.appendChild(title);
+        if (o.poly.length > 1) g.appendChild(sv("path", { d: o.poly.map(function (p, n) { return (n ? "L" : "M") + tx(p[0]) + " " + ty(p[1]); }).join("") + "z" }, "xo-poly"));
+        var cx = tx(o.center[0]), cy = ty(o.center[1]);
+        g.appendChild(sv("use", { href: "#i-cube", x: cx - CUBE / 2, y: cy - CUBE / 2, width: CUBE, height: CUBE }, "xo-icon"));
+        if (isEx) g.appendChild(sv("path", { d: "M" + (cx - CUBE / 2) + " " + (cy + CUBE / 2) + "L" + (cx + CUBE / 2) + " " + (cy - CUBE / 2) }, "xo-slash"));
+        if (objs.length > 1) { var nt = sv("text", { x: cx, y: cy + CUBE / 2 + 6 }, "xo-num"); nt.textContent = i + 1; g.appendChild(nt); }
+        if (!isEx) {
+          g.setAttribute("role", "button"); g.setAttribute("tabindex", "0");
+          g.setAttribute("aria-label", label + ". Hariç tutmak için Enter");
+          g.appendChild(sv("circle", { cx: cx, cy: cy, r: CUBE * .8 }, "xo-hit"));
+          g.addEventListener("click", function () { askExclude(o, label); });
+          g.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); askExclude(o, label); } });
+        } else {
+          g.setAttribute("role", "img"); g.setAttribute("aria-label", label + ", hariç tutuldu");
+        }
+        svg.appendChild(g);
+        xoNodes[i] = g;
+      }
+      var row = el("div", "xo-row" + (isEx ? " ex" : ""));
+      row.appendChild(el("span", "xo-idx num", String(i + 1)));
+      var nm = el("div", "xo-name", label); nm.title = o.name;
+      var small = el("small");
+      nm.appendChild(small);
+      row.appendChild(nm);
+      xoRows[i] = { row: row, small: small, ex: isEx };
+      var btn = el("button", "btn sm danger", "Hariç tut");
+      btn.disabled = isEx || !isOpen();
+      btn.onclick = function () { askExclude(o, label); };
+      row.appendChild(btn);
+      row.onmouseenter = function () { if (xoNodes[i]) xoNodes[i].classList.add("hot"); };
+      row.onmouseleave = function () { if (xoNodes[i]) xoNodes[i].classList.remove("hot"); };
+      list.appendChild(row);
+    });
+
+    xoNoz = sv("circle", { r: 2.6, visibility: "hidden" }, "xo-noz");
+    svg.appendChild(xoNoz);
+    $("xoMsg").textContent = kind === "ok" ? "" :
+      kind === "wait" ? "Nesneler yükleniyor…" :
+      "Bu baskıda nesne bilgisi yok. Dilimleyicide \"Nesneleri etiketle\" (Label objects) seçeneğini açıp dosyayı yeniden dilimle.";
+  }
+
+  function updateNozzle() {
+    if (!xoNoz || !xoGeo) return;
+    var m = /X:\s*(-?\d+(?:\.\d+)?)\s+Y:\s*(-?\d+(?:\.\d+)?)/.exec(String(st.curPosition || ""));
+    if (!m) { xoNoz.setAttribute("visibility", "hidden"); return; }
+    xoNoz.setAttribute("cx", +m[1] - xoGeo.x0);
+    xoNoz.setAttribute("cy", xoGeo.y1 - +m[2]);
+    xoNoz.removeAttribute("visibility");
+  }
+
+  function askExclude(o, label) {
+    if (!isOpen()) { toast("Yazıcıya bağlı değil.", "bad"); return; }
+    var file = String(st.printFileName), ex = xoExcluded();
+    if (ex[o.name]) return;
+    var left = xoObjects().filter(function (x) { return !ex[x.name]; }).length;
+    var wrap = el("div");
+    wrap.appendChild(el("p", "", "\"" + label + "\" bu baskıdan çıkarılacak. Yazıcı bu nesnenin kalan kısmını basmaz; geri alınamaz."));
+    if (left <= 1) wrap.appendChild(el("p", "hint", "Bu, baskıdaki son nesne. Hariç tutarsan yazıcı geri kalan işi boş geçer; baskıyı bitirmek için Durdur'u kullanman daha doğru olur."));
+    ask({ title: "Nesne hariç tutulsun mu?", node: wrap, ok: "Hariç tut", danger: true }).then(function (yes) {
+      if (!yes) return;
+      if (!busy() || String(st.printFileName) !== file) { toast("Baskı değişti, nesne hariç tutulmadı.", "bad"); return; }
+      if (!sendSet({ excludeObjects: [o.name] }, "Nesne hariç tutuluyor: " + label, true)) return;
+      setTimeout(requestObjects, 800);
+      setTimeout(requestObjects, 2500);
+      // Yazıcı komutu sessizce yok sayabilir; sonucu listeden doğrula
+      setTimeout(function () {
+        if (String(st.printFileName) !== file) return;
+        if (xoExcluded()[o.name]) toast("Nesne hariç tutuldu: " + label);
+        else toast("Yazıcı nesneyi hariç tutmadı: " + label, "warn");
+      }, 3500);
+    });
+  }
+  $("xoFold").onclick = function () {
+    xoOpen = !xoOpen;
+    lsSet("k1xo", xoOpen ? "1" : "0");
+    if (xoOpen) { xoAsks = 0; requestObjects(); }
+    renderObjects(isOpen(), busy());
+  };
+
+  // ---------- Dosyalar ----------
+  function renderFiles() {
+    var q = $("fSearch").value.trim().toLocaleLowerCase("tr-TR");
+    var sort = $("fSort").value;
+    var list = files.filter(function (f) { return !q || String(f.name).toLocaleLowerCase("tr-TR").indexOf(q) !== -1; });
+    list.sort(function (a, b) {
+      if (sort === "name") return String(a.name).localeCompare(String(b.name), "tr");
+      if (sort === "time") return (a.timeCost || 0) - (b.timeCost || 0);
+      return (b.create_time || 0) - (a.create_time || 0);
+    });
+    $("fCount").textContent = files.length ? (list.length === files.length ? files.length + " dosya" : list.length + " / " + files.length + " dosya") : "";
+    var grid = $("fgrid");
+    grid.textContent = "";
+    $("fEmpty").hidden = list.length > 0;
+    $("fEmpty").textContent = files.length ? "Aramaya uyan dosya yok." : (isOpen() ? "Yazıcıda dosya yok." : "Yazıcıya bağlı değil.");
+    var cur = String(st.printFileName || "");
+    list.forEach(function (f) {
+      var card = el("article", "fcard" + (busy() && f.path === cur ? " current" : ""));
+      var th = el("div", "fthumb");
+      var u = thumbUrl(f);
+      if (u) {
+        var img = el("img"); img.alt = ""; img.loading = "lazy"; img.src = u;
+        img.onerror = function () { img.remove(); th.appendChild(icon("image", "lg")); };
+        th.appendChild(img);
+      } else th.appendChild(icon("image", "lg"));
+      card.appendChild(th);
+      var body = el("div", "fbody");
+      var nm = el("div", "fname", f.name); nm.title = f.name;
+      body.appendChild(nm);
+      var meta = el("div", "fmeta");
+      if (f.timeCost) meta.appendChild(el("span", "", fmtDur(f.timeCost)));
+      var mat = String(f.material || "").split(";").filter(Boolean);
+      if (mat.length) meta.appendChild(el("span", "", mat.join("/")));
+      if (f.create_time) meta.appendChild(el("span", "", fmtDate(f.create_time)));
+      body.appendChild(meta);
+      var acts = el("div", "factions");
+      var pb = el("button", "btn sm primary print-btn");
+      pb.appendChild(icon("play", "fill sm")); pb.appendChild(document.createTextNode("Yazdır"));
+      pb.onclick = function () { printDialog(f); };
+      var db = el("button", "btn sm icon danger del-btn");
+      db.setAttribute("aria-label", f.name + " dosyasını sil"); db.title = "Sil";
+      db.setAttribute("data-path", f.path);
+      db.appendChild(icon("trash", "sm"));
+      db.onclick = function () {
+        ask({ title: "Dosya silinsin mi?", text: "\"" + f.name + "\" yazıcıdan silinecek. Bu geri alınamaz.", ok: "Sil", danger: true }).then(function (yes) {
+          if (!yes) return;
+          sendSet({ opGcodeFile: "deleteprt:" + f.path }, "Silindi: " + f.name);
+          setTimeout(requestFiles, 1500);
+        });
+      };
+      acts.appendChild(pb); acts.appendChild(db);
+      body.appendChild(acts);
+      card.appendChild(body);
+      grid.appendChild(card);
+    });
+    renderFileButtons();
+  }
+  function renderFileButtons() {
+    var open = isOpen(), b = busy(), cur = String(st.printFileName || "");
+    all(".print-btn").forEach(function (x) { x.disabled = !open || b; });
+    all(".del-btn").forEach(function (x) { x.disabled = !open || (b && x.getAttribute("data-path") === cur); });
+    all(".reprint-btn").forEach(function (x) { x.disabled = !open || b; });
+  }
+
+  function printDialog(f) {
+    var wrap = el("div");
+    var pj = el("div", "pjob");
+    var u = thumbUrl(f);
+    if (u) { var img = el("img"); img.alt = ""; img.src = u; img.onerror = function () { img.replaceWith(el("div", "ph-img")); }; pj.appendChild(img); }
+    else pj.appendChild(el("div", "ph-img"));
+    var dl = el("dl");
+    function add(k, v) { if (v) { dl.appendChild(el("dt", "", k)); dl.appendChild(el("dd", "num", v)); } }
+    add("Dosya", f.name);
+    add("Tahmini süre", f.timeCost ? fmtDur(f.timeCost) : "");
+    add("Malzeme", String(f.material || "").split(";").filter(Boolean).join("/"));
+    add("Nozul", f.nozzleTemp ? Math.round(f.nozzleTemp / 100) + " °C" : "");
+    add("Tabla", f.bedTemp ? Math.round(f.bedTemp / 100) + " °C" : "");
+    pj.appendChild(dl);
+    wrap.appendChild(pj);
+    var lab = el("label", "check");
+    var cb = el("input"); cb.type = "checkbox";
+    lab.appendChild(cb);
+    lab.appendChild(el("span", "", "Tabla boş ve temiz, filament takılı."));
+    wrap.appendChild(lab);
+    wrap.appendChild(el("p", "hint", "Yazıcı başlamadan önce kendi kalibrasyonunu yapar (birkaç dakika sürer)."));
+    cb.onchange = function () { $("mOk").disabled = !cb.checked; };
+    ask({ title: "Baskıyı başlat", node: wrap, ok: "Yazdır", needCheck: true }).then(function (yes) {
+      if (!yes) return;
+      if (busy()) { toast("Yazıcı meşgul.", "bad"); return; }
+      if (sendSet({ opGcodeFile: "printprt:" + f.path }, "Baskı başlatıldı: " + f.name)) showView("control");
+    });
+  }
+
+  // ---------- Yükleme ----------
+  function upload(file) {
+    if (!file) return;
+    if (!/\.gcode$/i.test(file.name)) { toast("Yalnız .gcode dosyası yüklenebilir.", "bad"); return; }
+    if (!isOpen()) { toast("Yazıcıya bağlı değil.", "bad"); return; }
+    if (busy() && baseName(st.printFileName).toLowerCase() === file.name.toLowerCase()) { toast("Bu dosya şu an basılıyor; baskı bitince yükle.", "bad"); return; }
+    var fd = new FormData();
+    fd.append("file", file);
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", base() + "/upload/" + encodeURIComponent(file.name));
+    $("upbar").classList.add("show");
+    $("upName").textContent = file.name;
+    $("upBarFill").style.width = "0%";
+    $("upPct").textContent = "%0";
+    xhr.upload.onprogress = function (e) {
+      if (!e.lengthComputable) return;
+      var p = Math.floor(e.loaded / e.total * 100);
+      $("upBarFill").style.width = p + "%"; $("upPct").textContent = "%" + p;
+    };
+    xhr.onload = function () {
+      var ok = false;
+      try { ok = JSON.parse(xhr.responseText).code === 200; } catch (e) { ok = xhr.status === 200; }
+      $("upbar").classList.remove("show");
+      if (ok) { toast("Yüklendi: " + file.name); log("Dosya yüklendi: " + file.name); setTimeout(requestFiles, 1000); }
+      else { toast("Yükleme başarısız (" + xhr.status + ").", "bad"); log("Yükleme başarısız: " + file.name); }
+    };
+    xhr.onerror = function () { $("upbar").classList.remove("show"); toast("Yükleme sırasında bağlantı hatası.", "bad"); log("Yükleme hatası: " + file.name); };
+    xhr.send(fd);
+  }
+  $("btnUpload").onclick = function () { $("fileInput").click(); };
+  $("fileInput").onchange = function () { upload(this.files[0]); this.value = ""; };
+  var dragDepth = 0;
+  window.addEventListener("dragenter", function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, "Files") !== -1) { dragDepth++; $("drop").classList.add("show"); } });
+  window.addEventListener("dragleave", function () { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) $("drop").classList.remove("show"); });
+  window.addEventListener("dragover", function (e) { e.preventDefault(); });
+  window.addEventListener("drop", function (e) {
+    e.preventDefault(); dragDepth = 0; $("drop").classList.remove("show");
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) { showView("files"); upload(f); }
+  });
+
+  // ---------- Geçmiş ----------
+  function renderHistory() {
+    if (!history) return;
+    $("hTotal").textContent = history.totalJob !== undefined ? history.totalJob : "—";
+    $("hTime").textContent = history.totalUsageTime !== undefined ? Math.round(history.totalUsageTime / 3600) + " sa" : "—";
+    $("hMat").textContent = history.totalUsageMaterial !== undefined ? (history.totalUsageMaterial / 1000).toFixed(0) + " m" : "—";
+    var box = $("hlist");
+    box.textContent = "";
+    var list = history.list.slice().sort(function (a, b) { return (b.starttime || 0) - (a.starttime || 0); });
+    $("hEmpty").hidden = list.length > 0;
+    list.forEach(function (h) {
+      var row = el("div", "hrow");
+      var f = files.filter(function (x) { return x.path === h.filename; })[0];
+      var u = f ? thumbUrl(f) : "";
+      if (u) { var img = el("img"); img.alt = ""; img.loading = "lazy"; img.src = u; img.onerror = function () { img.replaceWith(el("div", "ph-img")); }; row.appendChild(img); }
+      else row.appendChild(el("div", "ph-img"));
+      var mid = el("div");
+      mid.style.minWidth = "0";
+      mid.appendChild(el("div", "hname", baseName(h.filename)));
+      var meta = [];
+      if (h.starttime) meta.push(fmtDate(h.starttime));
+      if (h.usagetime) meta.push(fmtDur(h.usagetime));
+      if (h.usagematerial) meta.push((h.usagematerial / 1000).toFixed(1) + " m filament");
+      mid.appendChild(el("div", "hmeta num", meta.join(" · ")));
+      row.appendChild(mid);
+      row.appendChild(el("span", "tag " + (+h.printfinish ? "ok" : "no"), +h.printfinish ? "Tamamlandı" : "Yarım kaldı"));
+      if (f) {
+        var rb = el("button", "btn sm reprint-btn");
+        rb.appendChild(icon("refresh", "sm")); rb.appendChild(document.createTextNode("Tekrar yazdır"));
+        rb.onclick = function () { printDialog(f); };
+        row.appendChild(rb);
+      } else row.appendChild(el("span", "hmeta", "Dosya yok"));
+      box.appendChild(row);
+    });
+    renderFileButtons();
+  }
+
+  // ---------- Kamera ----------
+  function applyCam() {
+    var img = $("cam");
+    if (camOn && ip()) {
+      $("camEmpty").textContent = "Kamera yükleniyor…";
+      img.onerror = function () { img.removeAttribute("src"); $("camEmpty").textContent = "Kamera görüntüsü alınamadı"; };
+      img.onload = function () { $("camEmpty").textContent = ""; };
+      img.src = base() + ":8080/?action=stream";
+      $("camBtn").textContent = "Kapat";
+    } else {
+      img.removeAttribute("src");
+      $("camEmpty").textContent = "Kamera kapalı";
+      $("camBtn").textContent = "Aç";
+    }
+  }
+  $("camBtn").onclick = function () { camOn = !camOn; lsSet("k1cam", camOn ? "1" : "0"); applyCam(); };
+  document.addEventListener("visibilitychange", function () {
+    // Sekme arka plandayken akışı durdur, yazıcıyı yormasın
+    if (document.hidden) { $("cam").removeAttribute("src"); } else if (camOn) applyCam();
+  });
+
+  // ---------- Görünümler ----------
+  function showView(name) {
+    view = name;
+    lsSet("k1view", name);
+    all(".view").forEach(function (v) { v.classList.toggle("active", v.id === "view-" + name); });
+    all(".nav").forEach(function (n) { if (n.getAttribute("data-view") === name) n.setAttribute("aria-current", "page"); else n.removeAttribute("aria-current"); });
+    if (name === "files") requestFilesQuiet();
+    if (name === "history") requestHistory();
+    if (name === "control") pollObjects();
+    window.scrollTo(0, 0);
+  }
+  function requestFilesQuiet() { if (isOpen()) ws.send(JSON.stringify({ method: "get", params: { reqGcodeFile: 1 } })); }
+  all(".nav").forEach(function (n) { n.onclick = function () { showView(n.getAttribute("data-view")); }; });
+  $("connBtn").onclick = function () { showView("maint"); setTimeout(function () { $("ip").focus(); }, 50); };
+
+  // ---------- Kontroller ----------
+  $("btnPause").onclick = function () { sendSet({ pause: 1 }, "Duraklatıldı"); };
+  $("btnResume").onclick = function () { sendSet({ pause: 0 }, "Devam ediyor"); };
+  $("btnStop").onclick = function () {
+    ask({ title: "Baskı durdurulsun mu?", text: "Durdurulan baskı kaldığı yerden devam ettirilemez.", ok: "Durdur", danger: true })
+      .then(function (yes) { if (yes) sendSet({ stop: 1 }, "Baskı durduruldu"); });
+  };
+
+  all("[data-speed]").forEach(function (x) { x.onclick = function () { sendSet({ setFeedratePct: +x.getAttribute("data-speed") }, "Hız %" + x.getAttribute("data-speed")); }; });
+  $("speed").oninput = function () { $("speedVal").textContent = "%" + this.value; };
+  $("speed").onchange = function () { sendSet({ setFeedratePct: +this.value }, "Hız %" + this.value); };
+  $("flow").oninput = function () { $("flowVal").textContent = "%" + this.value; };
+  $("flow").onchange = function () { gcode("M221 S" + (+this.value), "Akış %" + this.value); };
+  all("[data-z]").forEach(function (x) { x.onclick = function () { sendSet({ setZOffset: x.getAttribute("data-z") }, "Z ofseti " + x.getAttribute("data-z"), true); setTimeout(requestPara, 800); }; });
+  $("btnZSave").onclick = function () {
+    ask({ title: "Z ofseti kaydedilsin mi?", text: "Şu anki Z ofseti (" + $("zoff").textContent + " mm) kalıcı olarak kaydedilecek.", ok: "Kaydet" })
+      .then(function (yes) { if (yes) sendSet({ savePara: 1 }, "Z ofseti kaydedildi"); });
+  };
+
+  function setNoz(v) {
+    v = Math.round(+v);
+    if (!(v >= 0 && v <= 300)) { toast("Nozul sıcaklığı 0–300 °C arasında olmalı.", "bad"); return; }
+    if (v === 0) gcode("M104 S0", "Nozul kapatıldı"); else sendSet({ nozzleTempControl: v }, "Nozul " + v + " °C");
+  }
+  function setBed(v) {
+    v = Math.round(+v);
+    if (!(v >= 0 && v <= 100)) { toast("Tabla sıcaklığı 0–100 °C arasında olmalı.", "bad"); return; }
+    if (v === 0) gcode("M140 S0", "Tabla kapatıldı"); else sendSet({ bedTempControl: { num: 0, val: v } }, "Tabla " + v + " °C");
+  }
+  $("nozSet").onclick = function () { if ($("nozIn").value !== "") { setNoz($("nozIn").value); $("nozIn").value = ""; } };
+  $("bedSet").onclick = function () { if ($("bedIn").value !== "") { setBed($("bedIn").value); $("bedIn").value = ""; } };
+  $("nozIn").addEventListener("keydown", function (e) { if (e.key === "Enter") $("nozSet").click(); });
+  $("bedIn").addEventListener("keydown", function (e) { if (e.key === "Enter") $("bedSet").click(); });
+  all("[data-pre]").forEach(function (x) {
+    x.onclick = function () { var p = x.getAttribute("data-pre").split(","); setNoz(p[0]); setBed(p[1]); };
+  });
+
+  all("[data-fansw]").forEach(function (sw) {
+    sw.onchange = function () {
+      var i = +sw.getAttribute("data-fansw");
+      var p = {}; p[FAN_KEYS[i][0]] = sw.checked ? 1 : 0;
+      sendSet(p, FAN_NAMES[i] + (sw.checked ? " açıldı" : " kapatıldı"));
+    };
+  });
+  all("[data-fan]").forEach(function (r) {
+    var i = +r.getAttribute("data-fan");
+    r.oninput = function () { $("fanVal" + i).textContent = "%" + r.value; };
+    r.onchange = function () { gcode("M106 P" + i + " S" + Math.round(+r.value / 100 * 255), FAN_NAMES[i] + " %" + r.value); };
+  });
+  $("lightSw").onchange = function () { sendSet({ lightSw: this.checked ? 1 : 0 }, this.checked ? "Işık açıldı" : "Işık kapatıldı"); };
+
+  function pressOne(groupId, btn) { all("button", $(groupId)).forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); }); }
+  all("[data-step]").forEach(function (b) { b.onclick = function () { step = b.getAttribute("data-step"); pressOne("steps", b); }; });
+  all("[data-elen]").forEach(function (b) { b.onclick = function () { eLen = +b.getAttribute("data-elen"); pressOne("eLens", b); }; });
+  all("[data-espd]").forEach(function (b) { b.onclick = function () { eSpd = +b.getAttribute("data-espd"); pressOne("eSpeeds", b); }; });
+
+  all("[data-home]").forEach(function (b) { b.onclick = function () { sendSet({ autohome: b.getAttribute("data-home") }, "Sıfırlanıyor: " + b.getAttribute("data-home")); }; });
+  all("[data-mv]").forEach(function (b) {
+    b.onclick = function () {
+      var mv = b.getAttribute("data-mv"), axis = mv[0], neg = mv[1] === "-";
+      sendSet({ setPosition: axis + (neg ? "-" : "") + step + " F" + (axis === "Z" ? 600 : 3000) }, mv + " " + step + " mm", true);
+    };
+  });
+  $("btnMotorsOff").onclick = function () { gcode("M84", "Motorlar serbest bırakıldı"); };
+
+  function extrude(sign) {
+    if (nozNow() < MIN_EXTRUDE_TEMP) { toast("Nozul soğuk, filament sürülmedi.", "bad"); return; }
+    // Ekstrüzyon modunu kaydedip geri yükle: duraklatılmış bir baskının ayarı bozulmasın
+    gcode("SAVE_GCODE_STATE NAME=K1PANEL_E", "", true);
+    gcode("M83", "", true);
+    gcode("G1 E" + (sign < 0 ? "-" : "") + eLen + " F" + Math.round(eSpd * 60), (sign < 0 ? "Geri çekiliyor " : "Filament itiliyor ") + eLen + " mm");
+    gcode("RESTORE_GCODE_STATE NAME=K1PANEL_E", "", true);
+  }
+  $("btnExtrude").onclick = function () { extrude(1); };
+  $("btnRetract").onclick = function () { extrude(-1); };
+
+  $("fSearch").oninput = renderFiles;
+  $("fSort").onchange = function () { lsSet("k1sort", this.value); renderFiles(); };
+  $("btnRefresh").onclick = function () { requestFiles(); toast("Dosya listesi yenilendi."); };
+  $("btnHistRefresh").onclick = function () { requestHistory(); };
+
+  function sendGcodeBox() {
+    var c = $("gcode").value.trim();
+    if (!c) return;
+    gcode(c, "G-code: " + c, true);
+    $("gcode").value = "";
+  }
+  $("btnGcode").onclick = sendGcodeBox;
+  $("gcode").addEventListener("keydown", function (e) { if (e.key === "Enter") sendGcodeBox(); });
+  $("btnLogClear").onclick = function () { $("log").textContent = ""; };
+  $("btnCleanErr").onclick = function () { sendSet({ cleanErr: 1 }, "Hata temizleme gönderildi"); };
+  $("btnRestart").onclick = function () {
+    ask({ title: "Yazıcı yazılımı yeniden başlatılsın mı?", text: "Süren bir baskı varsa durur. Yazıcı bir süre bağlantıyı kesip geri gelir.", ok: "Yeniden başlat", danger: true })
+      .then(function (yes) {
+        if (!yes) return;
+        sendSet({ restartKlipper: 1 }, "", true);
+        sendSet({ restartFirmware: 1 }, "Yeniden başlatılıyor");
+      });
+  };
+  $("btnConnect").onclick = connect;
+  $("ip").addEventListener("keydown", function (e) { if (e.key === "Enter") connect(); });
+
+  // ---------- Başlangıç ----------
+  $("ip").value = lsGet("k1ip", "192.168.1.97");
+  $("fSort").value = lsGet("k1sort", "date");
+  showView(lsGet("k1view", "control"));
+  render();
+  renderFiles();
+  connect();
+})();
+</script>
+</body>
+</html>
