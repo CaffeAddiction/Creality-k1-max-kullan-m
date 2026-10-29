@@ -237,6 +237,11 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
 .console .t{color:var(--faint)}
 .form-row{display:flex;gap:8px;flex-wrap:wrap}
 .form-row input{flex:1;min-width:160px}
+.scan-list{display:grid;gap:6px;margin-top:10px}
+.scan-list:empty{display:none}
+.scan-row{display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:10px;padding:8px 10px}
+.scan-name{flex:1;min-width:0;display:flex;flex-direction:column;font-size:14px}
+.scan-name span{font-size:12px}
 
 /* ---------- Pencere ve bildirim ---------- */
 .modal{position:fixed;inset:0;z-index:var(--z-modal);background:rgba(8,8,10,.7);display:none;place-items:center;padding:16px}
@@ -572,7 +577,12 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
               <input type="text" id="ip" inputmode="decimal" autocomplete="off">
               <button class="btn primary" id="btnConnect">Bağlan</button>
             </div>
-            <p class="hint">Bilgisayar ve yazıcı aynı ağda olmalı.</p>
+            <div class="row" style="margin-top:12px">
+              <button class="btn" id="btnScan"><svg class="i"><use href="#i-search"/></svg><span id="btnScanTxt">Ağda ara</span></button>
+              <span class="muted num" id="scanState" aria-live="polite"></span>
+            </div>
+            <div class="scan-list" id="scanList"></div>
+            <p class="hint">Bilgisayar ve yazıcı aynı ağda olmalı. Yazıcının adresi değişirse uygulama aynı ağda onu kendisi arar ve yeni adrese bağlanır.</p>
           </div>
           <div class="panel">
             <div class="ph"><svg class="i"><use href="#i-power"/></svg><h2>Yeniden başlatma</h2></div>
@@ -708,7 +718,15 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
     lsSet("k1ip", addr);
     setConn(false, "Bağlanıyor…");
     try { ws = new WebSocket("ws://" + addr + ":9999"); } catch (e) { setConn(false, "Adres hatalı"); return; }
+    var sock = ws, opened = false;
+    // Yanıt vermeyen adreste tarayıcı 20 sn kadar bekleyebilir; 6 sn'de vazgeç
+    // (tarayıcı art arda başarısız denemelerden sonra yeni bağlantıyı birkaç saniye geciktirebiliyor)
+    if (openTimer) clearTimeout(openTimer);
+    openTimer = setTimeout(function () { if (sock.readyState === 0) { try { sock.close(); } catch (e) {} } }, 6000);
     ws.onopen = function () {
+      opened = true;
+      failCount = 0;
+      clearTimeout(openTimer);
       setConn(true, addr);
       log("Yazıcıya bağlanıldı: " + addr);
       requestFiles();
@@ -720,8 +738,11 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
     };
     ws.onmessage = function (ev) { onMessage(ev.data); };
     ws.onclose = function () {
+      clearTimeout(openTimer);
       if (paraTimer) { clearInterval(paraTimer); paraTimer = null; }
-      setConn(false, "Bağlantı koptu");
+      setConn(false, opened ? "Bağlantı koptu" : "Yanıt yok");
+      // Kayıtlı adres hiç açılmıyorsa yazıcının adresi değişmiş olabilir: sayfa başına bir kez ağda ara
+      if (!opened && ++failCount >= 2 && !autoScanned) { autoScanned = true; autoFind(); }
       retryTimer = setTimeout(connect, 3000);
     };
     ws.onerror = function () {};
@@ -729,6 +750,7 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
   function setConn(on, text) {
     $("cdot").classList.toggle("on", on);
     $("connText").textContent = text;
+    all(".scan-row").forEach(refreshScanRow);
     render();
   }
   function isOpen() { return ws && ws.readyState === 1; }
@@ -1474,8 +1496,149 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
         sendSet({ restartFirmware: 1 }, "Yeniden başlatılıyor");
       });
   };
-  $("btnConnect").onclick = connect;
-  $("ip").addEventListener("keydown", function (e) { if (e.key === "Enter") connect(); });
+  // ---------- Ağda yazıcı arama ----------
+  // Tarayıcı ağ yayını (mDNS/UDP) yapamaz; aynı /24 ağdaki adresleri tek tek dener.
+  // Tarayıcı başarısız WebSocket denemelerini port taramasına karşı yavaşlattığı için ön eleme
+  // 80. porttaki web sayfasıyla yapılır (yazıcının kendi sayfası orada); yalnız web sunucusu
+  // yanıt veren adreslere uygulamanın zaten gönderdiği ReqPrinterPara sorgusu gider.
+  // Resim yüklemesi kullanılmıyor: tarayıcı düşük öncelikli istekleri aynı anda 10 ile sınırlıyor.
+  var openTimer = null, failCount = 0, autoScanned = false, scanning = null;
+
+  function subnetOf(addr) {
+    var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(addr || "").trim());
+    return m ? { prefix: m[1] + "." + m[2] + "." + m[3] + ".", last: +m[4] } : null;
+  }
+  // true: adreste bir web sunucusu yanıt verdi; false: yanıt yok ya da 80. port kapalı
+  function probeHttp(addr, ms) {
+    var ctl = window.AbortController ? new AbortController() : null;
+    var t = setTimeout(function () { if (ctl) ctl.abort(); }, ms);
+    return fetch("http://" + addr + "/mylogo.png", { mode: "no-cors", cache: "no-store", signal: ctl ? ctl.signal : undefined })
+      .then(function () { return true; }, function () { return false; })
+      .then(function (v) { clearTimeout(t); return v; });
+  }
+  function probeWs(addr, ms) {
+    return new Promise(function (resolve) {
+      var done = false, s = null;
+      function finish(v) {
+        if (done) return;
+        done = true; clearTimeout(t);
+        if (s) { s.onopen = s.onmessage = s.onerror = s.onclose = null; try { s.close(); } catch (e) {} }
+        resolve(v);
+      }
+      var t = setTimeout(function () { finish(null); }, ms);
+      try { s = new WebSocket("ws://" + addr + ":9999"); } catch (e) { finish(null); return; }
+      s.onopen = function () { try { s.send(JSON.stringify({ method: "get", params: { ReqPrinterPara: 1 } })); } catch (e) {} };
+      s.onmessage = function (ev) {
+        if (typeof ev.data !== "string" || ev.data.indexOf("heart_beat") !== -1) return;
+        var d; try { d = JSON.parse(ev.data); } catch (e) { return; }
+        if (d && (d.model || d.hostname)) finish({ ip: addr, hostname: String(d.hostname || ""), model: String(d.model || "") });
+      };
+      s.onerror = s.onclose = function () { finish(null); };
+    });
+  }
+  // items içindeki her öğe için work() çağırır, aynı anda en çok size tane; stop() doğru olunca yenisini başlatmaz
+  function pool(items, size, work, stop) {
+    return new Promise(function (resolve) {
+      var next = 0, active = 0;
+      function pump() {
+        while (active < size && next < items.length && !stop()) {
+          active++;
+          work(items[next++]).then(function () { active--; pump(); });
+        }
+        if (!active && (next >= items.length || stop())) resolve();
+      }
+      pump();
+    });
+  }
+  function scanNet(opts) {
+    var sn = subnetOf(ip()) || subnetOf(lsGet("k1ip", "")) || { prefix: "192.168.1.", last: 100 };
+    var list = [], i;
+    for (i = 1; i <= 254; i++) list.push(sn.prefix + i);
+    // Modem yazıcıya genelde eski adresine yakın bir adres verir; aramaya oradan başla
+    list.sort(function (a, b) { return Math.abs(+a.split(".")[3] - sn.last) - Math.abs(+b.split(".")[3] - sn.last); });
+    var job = { cancelled: false, found: [] }, checked = 0;
+    scanning = job;
+    function stop() { return job.cancelled || (opts.stopAtFirst && job.found.length > 0); }
+    return pool(list, 32, function (addr) {
+      return probeHttp(addr, 2500).then(function (web) {
+        checked++;
+        if (opts.onProgress) opts.onProgress(prefixText(sn) + " taranıyor… " + checked + "/" + list.length);
+        if (!web || stop()) return;
+        // Web sunucusu olan her cihaz yazıcı değildir (modem vb.); durum sorgusuyla doğrula
+        return probeWs(addr, 8000).then(function (r) {
+          if (r && !stop()) { job.found.push(r); if (opts.onFound) opts.onFound(r); }
+        });
+      });
+    }, stop).then(function () {
+      if (scanning === job) scanning = null;
+      return job.found;
+    });
+  }
+  function prefixText(sn) { return sn.prefix + "1–254"; }
+  function scanProgress(text) { $("scanState").textContent = text; }
+  function scanRow(r) {
+    var row = el("div", "scan-row");
+    row.setAttribute("data-ip", r.ip);
+    var name = el("div", "scan-name");
+    name.appendChild(el("b", "", r.hostname || "Yazıcı"));
+    name.appendChild(el("span", "muted num", (r.model ? r.model + " · " : "") + r.ip));
+    row.appendChild(name);
+    var b = el("button", "btn sm");
+    b.onclick = function () { useIp(r.ip); };
+    row.appendChild(b);
+    refreshScanRow(row);
+    return row;
+  }
+  function refreshScanRow(row) {
+    var b = row.querySelector("button"), addr = row.getAttribute("data-ip");
+    var cur = ip() === addr, on = cur && isOpen();
+    b.textContent = on ? "Bağlı" : cur ? "Bağlanıyor…" : "Bağlan";
+    b.className = "btn sm" + (cur ? "" : " primary");
+    b.disabled = cur;
+  }
+  function useIp(addr) {
+    $("ip").value = addr;
+    failCount = 0;
+    connect();
+  }
+  function setScanBtn(busy) { $("btnScanTxt").textContent = busy ? "Durdur" : "Ağda ara"; }
+  $("btnScan").onclick = function () {
+    if (scanning) { scanning.cancelled = true; return; }
+    $("scanList").textContent = "";
+    setScanBtn(true);
+    scanNet({ onProgress: scanProgress, onFound: function (r) { $("scanList").appendChild(scanRow(r)); } }).then(function (found) {
+      setScanBtn(false);
+      $("scanState").textContent = found.length ? found.length + " yazıcı bulundu" : "Ağda yazıcı bulunamadı. Yazıcı açık ve aynı ağda mı?";
+    });
+  };
+  // Kayıtlı adres yanıt vermeyince bir kez kendiliğinden çalışır; bulduğu ilk yazıcıya geçer
+  function autoFind() {
+    if (scanning) return;
+    var old = ip();
+    log(old + " yanıt vermiyor, yazıcı ağda aranıyor…");
+    toast("Yazıcı " + old + " adresinde yanıt vermiyor, ağda aranıyor…", "warn");
+    setScanBtn(true);
+    scanNet({ stopAtFirst: true, onProgress: scanProgress }).then(function (found) {
+      setScanBtn(false);
+      if (isOpen()) { $("scanState").textContent = ""; return; }   // bu arada eski adres geri geldi
+      var other = found.filter(function (r) { return r.ip !== old; })[0];
+      if (other) {
+        $("scanState").textContent = "";
+        $("scanList").textContent = "";
+        $("scanList").appendChild(scanRow(other));
+        log("Yazıcı yeni adreste bulundu: " + other.ip + (other.hostname ? " (" + other.hostname + ")" : ""));
+        toast("Yazıcı yeni adreste bulundu: " + other.ip);
+        useIp(other.ip);
+      } else if (!found.length) {
+        $("scanState").textContent = "Ağda yazıcı bulunamadı.";
+        log("Ağda yazıcı bulunamadı");
+        toast("Yazıcı ağda da bulunamadı. Açık ve aynı ağda mı?", "bad");
+      }
+    });
+  }
+
+  $("btnConnect").onclick = function () { failCount = 0; connect(); };
+  $("ip").addEventListener("keydown", function (e) { if (e.key === "Enter") { failCount = 0; connect(); } });
 
   // ---------- Başlangıç ----------
   $("ip").value = lsGet("k1ip", "192.168.1.105");
