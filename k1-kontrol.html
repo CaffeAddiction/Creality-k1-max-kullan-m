@@ -97,6 +97,9 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
 .alert.bad{background:var(--danger-soft);border-color:var(--danger)}
 .alert.bad .i{color:var(--danger)}
 .alert p{margin:0;flex:1;min-width:200px}
+.alert p strong{display:block;font-weight:650}
+.alert .alert-sub{display:block;font-size:14px;color:var(--muted);margin-top:3px}
+.alert .alert-code{display:block;font-size:12px;color:var(--faint);margin-top:3px}
 
 /* ---------- Kontrol görünümü ---------- */
 .ctl{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:16px;align-items:start}
@@ -860,7 +863,7 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
     var stTxt = info[0];
     var selfTest = +st.withSelfTest;
     if (s === 1 && selfTest > 0 && selfTest < 100) stTxt = "Kalibrasyon yapıyor %" + selfTest;
-    if (+st.err && +st.err.errcode) info = [stTxt, "bad"];
+    if (st.err && +st.err.errcode) info = [stTxt, "bad"];
 
     // Üst çubuk
     $("devName").textContent = st.hostname || "K1 Max";
@@ -992,7 +995,7 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
 
   function renderAlerts(open) {
     var err = st.err || {};
-    var sig = open ? [+st.materialStatus, +st.repoPlrStatus, +err.errcode, err.value].join("|") : "";
+    var sig = open ? [+st.materialStatus, +st.repoPlrStatus, +err.errcode, +err.key, err.value].join("|") : "";
     if (sig === alertSig) return;
     alertSig = sig;
     var box = $("alerts");
@@ -1006,14 +1009,108 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
       ["Kaldığı yerden devam", "primary", function () { sendSet({ repoPlrStatus: 1 }, "Yarıda kalan baskı: devam"); }],
       ["İptal et", "", function () { sendSet({ repoPlrStatus: 0 }, "Yarıda kalan baskı: iptal"); }]
     ]));
-    if (+err.errcode) box.appendChild(alertBox("Yazıcı hata bildiriyor: kod " + err.errcode + (err.value ? " · " + err.value : ""), true, [
-      ["Hatayı temizle", "primary", function () { sendSet({ cleanErr: 1 }, "Hata temizlendi"); }]
-    ]));
+    if (+err.errcode) {
+      var e = errInfo(err);
+      var p = el("p");
+      p.appendChild(el("strong", "", e.msg));
+      if (e.hint) p.appendChild(el("span", "alert-sub", e.hint));
+      p.appendChild(el("span", "alert-code", e.ref));
+      box.appendChild(alertBox(p, e.level !== 3, [
+        ["Hatayı temizle", "primary", function () { sendSet({ cleanErr: 1 }, "Hata temizlendi"); }]
+      ]));
+    }
+  }
+
+  // Creality Print 5.1'in hata listesi (CrealityUI errorData.js), Türkçeye çevrildi.
+  // Creality Print önce ayrıntı koduna (err.key), yoksa ana koda (err.errcode) bakar; burada da öyle.
+  // [görünen kod, açıklama, ne yapmalı]
+  var ERRORS = {
+    1: ["1", "Motor sürücüsünde arıza var.", "Yazıcıyı kapatıp açın; sürerse motor kablolarını kontrol edin."],
+    2: ["2", "Yazıcının iç yazılımında hata oluştu.", "Bakım → Yeniden başlatma ile yazıcı yazılımını yeniden başlatın."],
+    3: ["3", "Yazıcının parçaları arasında iletişim koptu.", "Yazıcıyı yeniden başlatın; sürerse kafa ve anakart kablolarını kontrol edin."],
+    4: ["4", "Isıtıcı beklendiği gibi ısınmıyor.", "Nozul ya da tabla ısıtıcısının kablosunu ve termistörünü kontrol edin."],
+    6: ["6", "Ekstrüderde arıza var.", "Filament sıkışmış ya da ekstrüder dişlisi kaymış olabilir."],
+    7: ["7", "Baskı dosyasındaki koordinatlar tabla sınırının dışında.", "Dosya başka bir yazıcı için dilimlenmiş ya da parça plakaya sığmıyor olabilir."],
+    9: ["9", "Titreşim (rezonans) sensöründe arıza var.", "Yazıcıyı yeniden başlatın; sürerse kafadaki sensör kablosunu kontrol edin."],
+    10: ["10", "Bir fanda arıza var.", "Fanlarda sıkışan filament ya da kopuk kablo olabilir."],
+    100: ["100", "Baskı sırasında bilinmeyen bir hata oluştu.", "Hatayı temizleyip yeniden deneyin; sürerse yazıcıyı yeniden başlatın."],
+    101: ["AC0101", "Kamera baskı kalitesinde bir sorun gördü, baskı duraklatıldı.", "Kameradan baskıya bakın; sorun yoksa hatayı temizleyip devam edin."],
+    103: ["AC0103", "İlk katmanda kalite sorunu algılandı, baskı duraklatıldı.", "İlk katman tablaya oturmamış olabilir: plakayı temizleyin, gerekirse Z ofsetini ayarlayın."],
+    104: ["AC0104", "Baskı tablasında yabancı cisim algılandı, baskı duraklatıldı.", "Tablada eski baskı artığı, kırıntı ya da bir eşya var. Tablayı temizleyip baskıyı yeniden başlatın. Bu tarama baskı öncesi kalibrasyonun parçası."],
+    110: ["BM0110", "Anakart bağlantısında sorun var.", "Yazıcıyı kapatıp açın; sürerse servise danışın."],
+    111: ["BM0111", "Baskı kafasının bağlantısı anormal.", "Kafa kablosu yerinden çıkmış olabilir; yazıcıyı kapatıp kontrol edin."],
+    112: ["BM0112", "Tabla bağlantısı anormal.", "Tablanın kablosu yerinden çıkmış olabilir; yazıcıyı kapatıp kontrol edin."],
+    115: ["CM0115", "Yarıda kalmış bir baskı bulundu.", "Kaldığı yerden devam etmek isteyip istemediğinizi seçin."],
+    116: ["TR0116", "Filament bitti, baskı duraklatıldı.", "Yeni filament takıp devam edin."],
+    117: ["AC0117", "Parçada kalkma (çarpılma) algılandı, baskı duraklatıldı.", "Kenar (brim) ekleyin, plakayı temizleyin, kapıyı kapalı tutun."],
+    201: ["201", "Kabin sıcaklığı anormal.", "Kabin sensörü ya da fanı arızalı olabilir."],
+    204: ["204", "Bir fanda arıza var.", "Fanlarda sıkışan filament ya da kopuk kablo olabilir."],
+    205: ["205", "Ağ bağlantısında sorun var.", "Yazıcının Wi-Fi bağlantısını kontrol edin."],
+    206: ["206", "Yapay zekâ baskı kalitesinde sorun gördü.", "Kameradan baskıya bakın."],
+    207: ["207", "Z-Touch (seviyeleme sensörü) arızası.", "Nozul ucunu temizleyip yeniden deneyin; sürerse yazıcıyı yeniden başlatın."],
+    208: ["208", "Dosyada sorun var.", "Dosyayı yeniden dilimleyip yükleyin."],
+    209: ["209", "Tabla sıcaklığı anormal.", "Tabla ısıtıcısının kablosunu ve termistörünü kontrol edin."],
+    500: ["AC0500", "Yapay zekâ baskı kalitesinde sorun gördü.", "Kameradan baskıya bakın."],
+    501: ["TF0501", "Soğutucu (heat break) fanında arıza var.", "Kafadaki küçük fanda sıkışma ya da kopuk kablo olabilir; bu fan dönmeden baskı yapmayın."],
+    502: ["CF0502", "Anakart fanında arıza var.", "Fanda sıkışma ya da kopuk kablo olabilir."],
+    503: ["AC0503", "İlk katmanda kalite sorunu algılandı.", "Plakayı temizleyin, gerekirse Z ofsetini ayarlayın."],
+    504: ["AL0504", "Bu dosya akış ölçümünü desteklemiyor.", "Uyarı; baskı etkilenmez."],
+    505: ["AL0505", "AI LiDAR arızası.", "LiDAR camını temizleyip yazıcıyı yeniden başlatın."],
+    506: ["AL0506", "AI LiDAR kalibrasyonu başarısız.", "LiDAR camını temizleyip yeniden deneyin."],
+    507: ["AL0507", "AI LiDAR hizalaması başarısız.", "LiDAR camını temizleyip yeniden deneyin."],
+    508: ["BS0508", "Yazıcının depolama alanı dolmak üzere.", "Dosyalar bölümünden eski dosyaları silin."],
+    509: ["AC0509", "Kabin çok sıcak, kamera kapandı.", "Sıcaklık düşünce kamera kendiliğinden açılır."],
+    510: ["AC0510", "Kamera açılamadı.", "Yazıcıyı yeniden başlatın."],
+    523: ["AC0523", "Parçada kalkma (çarpılma) algılandı.", "Kenar (brim) ekleyin, plakayı temizleyin, kapıyı kapalı tutun."],
+    800: ["800", "Eksen hareketinde hata oluştu.", "Bir eksen engelleniyor olabilir; kafanın ve tablanın serbestçe hareket ettiğini kontrol edin."],
+    801: ["801", "Makine hazırlanıyor.", "Biraz bekleyin."],
+    2000: ["XS2000", "Sistem hatası.", "Yazıcıyı yeniden başlatmayı deneyin."],
+    2001: ["XS2001", "Sistem hatası.", "Yazıcıyı yeniden başlatmayı deneyin."],
+    2060: ["XS2060", "Sistem hatası.", "Yazıcıyı yeniden başlatmayı deneyin."],
+    2093: ["XS2093", "Sistem hatası.", "Yazıcıyı yeniden başlatmayı deneyin."],
+    2111: ["TE2111", "Nozul sıcaklığı en düşük basma sıcaklığının altında.", "Nozulu ısıtıp yeniden deneyin."],
+    2509: ["TE2509", "Nozul sıcaklığı okunamıyor; termistör kopmuş olabilir.", "Yazıcıyı kapatıp kafa kablosunu kontrol edin."],
+    2510: ["CB2510", "Tabla termistörü açık devre (kablo kopuk olabilir).", "Yazıcıyı kapatıp tabla kablosunu kontrol edin."],
+    2511: ["CT2511", "Kabin termistörü açık devre olabilir.", "Kabin sensörünün kablosunu kontrol edin."],
+    2512: ["BM2512", "Anakart sıcaklığı anormal.", "Anakart fanını ve havalandırmayı kontrol edin."],
+    2515: ["TE2515", "Nozul sıcaklığı sınırı aştı; termistör kısa devre olabilir.", "Yazıcıyı kapatıp kafa kablosunu kontrol edin."],
+    2516: ["CB2516", "Tabla termistörü kısa devre.", "Yazıcıyı kapatıp tabla kablosunu kontrol edin."],
+    2517: ["CT2517", "Kabin termistörü kısa devre olabilir.", "Kabin sensörünün kablosunu kontrol edin."],
+    2536: ["CL2536", "Seviyeleme sensöründe donanım arızası olabilir.", "Yazıcıyı yeniden başlatın; sürerse servise danışın."],
+    2537: ["CL2537", "Seviyeleme sensörü dış bir etkiden etkilenmiş olabilir.", "Nozul ucundaki plastiği ve tabladaki cisimleri temizleyip yeniden deneyin."],
+    2564: ["TE2564", "Nozul beklendiği gibi ısınmıyor.", "Kafa ısıtıcısının kablosunu kontrol edin."],
+    2565: ["CB2565", "Tabla beklendiği gibi ısınmıyor.", "Tabla ısıtıcısının kablosunu kontrol edin."],
+    2566: ["CX2566", "X ekseni motor sürücüsünde arıza.", "Yazıcıyı kapatıp açın; sürerse X motor kablosunu kontrol edin."],
+    2567: ["CY2567", "Y ekseni motor sürücüsünde arıza.", "Yazıcıyı kapatıp açın; sürerse Y motor kablosunu kontrol edin."],
+    2568: ["CZ2568", "Z ekseni motor sürücüsünde arıza.", "Yazıcıyı kapatıp açın; sürerse Z motor kablosunu kontrol edin."],
+    2571: ["XD2571", "Baskı dosyası bozuk.", "Dosyayı yeniden dilimleyip yükleyin."],
+    2573: ["CX2573", "X ekseni sıfırlanamadı.", "Kafanın X yönünde serbestçe hareket ettiğini kontrol edin."],
+    2577: ["CY2577", "Y ekseni sıfırlanamadı.", "Kafanın Y yönünde serbestçe hareket ettiğini kontrol edin."],
+    2581: ["CZ2581", "Z ekseni sıfırlanamadı.", "Tablanın altında engel olmadığını ve nozul ucunun temiz olduğunu kontrol edin."],
+    2585: ["CX2585", "Baskı dosyasında X koordinatı sınır dışında.", "Dosya bu yazıcı için dilimlenmemiş ya da parça plakaya sığmıyor olabilir."],
+    2586: ["CY2586", "Baskı dosyasında Y koordinatı sınır dışında.", "Dosya bu yazıcı için dilimlenmemiş ya da parça plakaya sığmıyor olabilir."],
+    2587: ["CZ2587", "Baskı dosyasında Z koordinatı sınır dışında.", "Parça yazıcının yüksekliğini aşıyor olabilir."],
+    2588: ["CZ2588", "Z ofseti sınırı aştı.", "Kontrol → Z ofsetini sıfıra yakın bir değere getirin."],
+    3000: ["XS3000", "Sistem hatası.", "Yazıcıyı yeniden başlatmayı deneyin."],
+    3001: ["XS3001", "Sistem hatası.", "Yazıcıyı yeniden başlatmayı deneyin."],
+    3002: ["XS3002", "Sistem hatası.", "Yazıcıyı yeniden başlatmayı deneyin."],
+    20000: ["", "Yarıda kalmış bir baskı bulundu.", "Elektrik kesintisi olmuş olabilir."],
+    20010: ["", "Filament bitti, baskı duraklatıldı.", "Yeni filament takıp devam edin."]
+  };
+  function errInfo(err) {
+    var code = +err.errcode, key = +err.key;
+    var row = (key && ERRORS[key]) || ERRORS[code];
+    var nums = "kod " + code + (key && key !== code ? " / " + key : "");
+    var level = row && row[0].indexOf("CM") === 0 ? 3 : 1;
+    if (!row) return { msg: "Yazıcı tanımadığımız bir hata bildirdi.", hint: err.value ? String(err.value) : "Hatayı temizleyip yeniden deneyin; sürerse yazıcıyı yeniden başlatın.", ref: nums, level: 1 };
+    var hint = row[2];
+    if (err.value && code !== 508) hint += " (" + err.value + ")";
+    return { msg: row[1], hint: hint, ref: (row[0] ? row[0] + " · " : "") + nums, level: level };
   }
   function alertBox(msg, bad, actions) {
     var d = el("div", "alert" + (bad ? " bad" : ""));
     d.appendChild(icon("alert", "lg"));
-    d.appendChild(el("p", "", msg));
+    d.appendChild(typeof msg === "string" ? el("p", "", msg) : msg);
     actions.forEach(function (a) {
       var btn = el("button", "btn sm " + a[1], a[0]);
       btn.onclick = a[2];
