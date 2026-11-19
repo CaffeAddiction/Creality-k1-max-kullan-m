@@ -242,6 +242,8 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
 .scan-row{display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:10px;padding:8px 10px}
 .scan-name{flex:1;min-width:0;display:flex;flex-direction:column;font-size:14px}
 .scan-name span{font-size:12px}
+.mesh-ph{flex-wrap:wrap;row-gap:8px}
+.mesh-ph h2{white-space:nowrap}
 .mesh-wrap{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
 .mesh-box{flex:1 1 300px;max-width:420px;min-width:0}
 .mesh-cap{font-size:12px;color:var(--faint);text-align:center;margin:4px 0}
@@ -611,7 +613,7 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
             </div>
           </div>
           <div class="panel" style="grid-column:1/-1">
-            <div class="ph"><svg class="i"><use href="#i-grid"/></svg><h2>Tabla haritası</h2><span class="spacer"></span><button class="btn sm" id="btnMesh"><svg class="i"><use href="#i-refresh"/></svg>Oku</button></div>
+            <div class="ph mesh-ph"><svg class="i"><use href="#i-grid"/></svg><h2>Tabla haritası</h2><span class="spacer"></span><button class="btn sm" id="btnMesh"><svg class="i"><use href="#i-refresh"/></svg>Oku</button><button class="btn sm primary" id="btnLevel"><svg class="i"><use href="#i-grid"/></svg>Kalibre et</button></div>
             <div class="mesh-wrap">
               <div class="mesh-box">
                 <div class="mesh-cap">Arka</div>
@@ -624,7 +626,7 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
                 <p class="mesh-note" id="meshNote" aria-live="polite"></p>
               </div>
             </div>
-            <p class="hint">Yazıcının kayıtlı tabla ölçümü (mm). Yazıcı ilk katmanı bu ağa göre yükseltip alçaltır. Baskıyı "Kalibrasyonla yazdır" ile başlattıktan sonra burada yeni ölçüm görünmüyorsa kalibrasyon tablayı yeniden ölçmemiş demektir.</p>
+            <p class="hint">Yazıcının kayıtlı tabla ölçümü (mm). "Kalibre et", yazıcı ekranındaki otomatik seviyelemenin aynısıdır (Creality'nin G29 makrosu): kafa sıfırlanır, nozul ısıtılıp temizlenir, tabla baştan ölçülüp kaydedilir, sonra ısıtıcılar kapanır. Baskı başındaki kısa ölçüm bu kaydı değiştirmez.</p>
           </div>
           <div class="panel" style="grid-column:1/-1">
             <div class="ph"><svg class="i"><use href="#i-terminal"/></svg><h2>Konsol</h2><span class="spacer"></span><button class="btn sm ghost" id="btnLogClear">Temizle</button></div>
@@ -888,6 +890,7 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
     $("btnRestart").disabled = !open;
     $("btnCleanErr").disabled = !open;
     $("btnMesh").disabled = !open;
+    renderLevel();
     if (!mesh && open !== meshOpenSeen) { meshOpenSeen = open; renderMesh(); }
   }
   var meshOpenSeen = null;
@@ -1320,7 +1323,7 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
     calLab.appendChild(calCb);
     var calTxt = el("span");
     calTxt.appendChild(el("strong", "", "Kalibrasyonla yazdır"));
-    calTxt.appendChild(el("span", "sub", "Creality Print'teki “Print calibration” seçeneği. Yazıcı baskıdan önce kendi kalibrasyonunu yapar, başlangıç birkaç dakika uzar. Tablayı yeniden ölçüp ölçmediğini Bakım → Tabla haritası gösterir."));
+    calTxt.appendChild(el("span", "sub", "Creality Print'teki “Print calibration” seçeneği. Yazıcı baskıdan önce kendi kalibrasyonunu yapar, başlangıç birkaç dakika uzar. Tablayı kalıcı olarak ölçmek için Bakım → Tabla haritası → Kalibre et."));
     calLab.appendChild(calTxt);
     wrap.appendChild(calLab);
     cb.onchange = function () { $("mOk").disabled = !cb.checked; };
@@ -1482,10 +1485,11 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
     }
     lsSet("k1mesh", JSON.stringify(rec));
     mesh = rec;
+    levelSeen(sig);
     renderMesh();
     if (calWatch && calWatch.asked) {
       if (calWatch.sig && calWatch.sig !== sig) toast("Kalibrasyon tablayı yeniden ölçtü; tabla haritası güncellendi.");
-      else if (calWatch.sig) toast("Kalibrasyon bitti ama kayıtlı tabla ağı değişmedi.", "warn");
+      else if (calWatch.sig) log("Baskı başı kalibrasyonu bitti; kayıtlı tabla ağı değişmedi (kalıcı ölçüm: Kalibre et).");
       calWatch = null;
     } else if (calWatch && !calWatch.sawRun) calWatch.sig = sig; // kalibrasyon başlamadan önceki son ağ
   }
@@ -1542,8 +1546,66 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
     } else {
       note.textContent = "Ağ " + fmtStamp(m.seen) + " tarihinden beri değişmedi.";
     }
+    if (levelWatch) {
+      note.className = "mesh-note new";
+      note.textContent = "Kalibrasyon sürüyor (başladı " + fmtClock(new Date(levelWatch.started)) + "). Bitince harita kendiliğinden yenilenir.";
+    }
   }
   $("btnMesh").onclick = requestMesh;
+
+  // Ekrandaki otomatik seviyeleme = Creality'nin G29 makrosu (K1_Series_Klipper gcode_macro.cfg):
+  // G28, BED_MESH_CLEAR, NOZZLE_CLEAR, ACCURATE_G28, BED_MESH_CALIBRATE, CXSAVE_CONFIG, TURN_OFF_HEATERS.
+  // Durum bilgisinde ilerleme yok; bitişi kayıtlı ağın değişmesinden anlarız.
+  var levelWatch = null;
+  $("btnLevel").onclick = function () {
+    if (busy()) { toast("Baskı sürerken kalibrasyon yapılamaz.", "bad"); return; }
+    var wrap = el("div");
+    wrap.appendChild(el("p", "", "Yazıcı ekranındaki otomatik seviyelemenin aynısı: kafa sıfırlanır, nozul ısıtılıp silinir, tabla baştan ölçülüp kaydedilir, sonra ısıtıcılar kapanır. Birkaç dakika sürer."));
+    var lab = el("label", "check");
+    var cb = el("input"); cb.type = "checkbox";
+    lab.appendChild(cb);
+    lab.appendChild(el("span", "", "Tabla boş, plaka yerine tam oturmuş ve temiz."));
+    wrap.appendChild(lab);
+    cb.onchange = function () { $("mOk").disabled = !cb.checked; };
+    ask({ title: "Tabla kalibrasyonu", node: wrap, ok: "Kalibre et", needCheck: true }).then(function (yes) {
+      if (!yes) return;
+      if (busy()) { toast("Yazıcı meşgul.", "bad"); return; }
+      if (!gcode("G29", "Tabla kalibrasyonu başladı")) return;
+      levelWatch = { started: Date.now(), sig: mesh && mesh.sig ? mesh.sig : "", timer: setInterval(pollLevel, 20000) };
+      if (!levelWatch.sig) requestMesh();
+      renderLevel();
+      renderMesh();
+    });
+  };
+  function pollLevel() {
+    if (!levelWatch) return;
+    if (Date.now() - levelWatch.started > 20 * 60 * 1000) {
+      endLevel();
+      toast("Kalibrasyondan 20 dk sonra kayıtlı ağ hâlâ değişmedi. Yazıcıyı kontrol et.", "warn");
+      return;
+    }
+    requestMesh();
+  }
+  function levelSeen(sig) {
+    // onMesh her okumada çağırır: kayıtlı ağ değiştiyse kalibrasyon bitmiştir
+    if (!levelWatch) return;
+    if (!levelWatch.sig) { levelWatch.sig = sig; return; }
+    if (sig !== levelWatch.sig) {
+      endLevel();
+      toast("Tabla kalibre edildi; yeni ağ kaydedildi.");
+      log("Tabla kalibrasyonu bitti, yeni ağ okundu.");
+    }
+  }
+  function endLevel() {
+    if (levelWatch) { clearInterval(levelWatch.timer); levelWatch = null; }
+    renderLevel();
+    renderMesh();
+  }
+  function renderLevel() {
+    var b = $("btnLevel");
+    b.disabled = !isOpen() || busy() || !!levelWatch;
+    b.lastChild.textContent = levelWatch ? "Ölçülüyor…" : "Kalibre et";
+  }
 
   // ---------- Görünümler ----------
   function showView(name) {
