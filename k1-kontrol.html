@@ -242,6 +242,23 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
 .scan-row{display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:10px;padding:8px 10px}
 .scan-name{flex:1;min-width:0;display:flex;flex-direction:column;font-size:14px}
 .scan-name span{font-size:12px}
+.mesh-wrap{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.mesh-box{flex:1 1 300px;max-width:420px;min-width:0}
+.mesh-cap{font-size:12px;color:var(--faint);text-align:center;margin:4px 0}
+.mesh{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.mesh-cell{aspect-ratio:1;border-radius:8px;background:var(--panel2);display:grid;place-items:center;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--text)}
+.mesh-cell.mark{outline:2px solid var(--text);outline-offset:-2px}
+.mesh-empty{grid-column:1/-1;color:var(--muted);font-size:14px;padding:32px 8px;text-align:center;background:var(--panel2);border-radius:10px}
+.mesh-info{flex:1 1 240px;min-width:0}
+.mesh-stats{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px}
+.mesh-stats dt{color:var(--muted)}
+.mesh-stats dd{margin:0}
+.mesh-legend{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:14px 0 0}
+.mesh-legend .bar{flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,rgba(90,169,255,.95),var(--panel2),rgba(255,176,32,.95))}
+.mesh-note{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:var(--panel2);font-size:14px}
+.mesh-note.new{background:var(--accent-soft)}
+.mesh-note:empty{display:none}
+.check .sub{display:block;font-size:13px;color:var(--muted);margin-top:2px}
 
 /* ---------- Pencere ve bildirim ---------- */
 .modal{position:fixed;inset:0;z-index:var(--z-modal);background:rgba(8,8,10,.7);display:none;place-items:center;padding:16px}
@@ -327,6 +344,7 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
   <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/></symbol>
   <symbol id="i-exclude" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m2 2 20 20"/></symbol>
   <symbol id="i-cube" viewBox="0 0 24 24"><path d="M12 2.6 20.6 7.3 12 12 3.4 7.3Z"/><path fill-opacity=".72" d="M3.4 9.1 11.2 13.4V21.4L3.4 17Z"/><path fill-opacity=".5" d="M20.6 9.1 12.8 13.4V21.4L20.6 17Z"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></symbol>
   <symbol id="i-gauge2" viewBox="0 0 24 24"><path d="M12 2v4"/><path d="m4.93 10.93 2.83 2.83"/><path d="M2 18h4"/><path d="M18 18h4"/><path d="m19.07 10.93-2.83 2.83"/><path d="M12 18a6 6 0 0 0-6-6"/></symbol>
 </svg>
 
@@ -593,6 +611,22 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
             </div>
           </div>
           <div class="panel" style="grid-column:1/-1">
+            <div class="ph"><svg class="i"><use href="#i-grid"/></svg><h2>Tabla haritası</h2><span class="spacer"></span><button class="btn sm" id="btnMesh"><svg class="i"><use href="#i-refresh"/></svg>Oku</button></div>
+            <div class="mesh-wrap">
+              <div class="mesh-box">
+                <div class="mesh-cap">Arka</div>
+                <div class="mesh" id="mesh" role="img" aria-label="Tabla ölçüm haritası"></div>
+                <div class="mesh-cap">Ön (kapı tarafı)</div>
+              </div>
+              <div class="mesh-info">
+                <dl class="mesh-stats" id="meshStats"></dl>
+                <div class="mesh-legend"><span>alçak</span><span class="bar"></span><span>yüksek</span></div>
+                <p class="mesh-note" id="meshNote" aria-live="polite"></p>
+              </div>
+            </div>
+            <p class="hint">Yazıcının kayıtlı tabla ölçümü (mm). Yazıcı ilk katmanı bu ağa göre yükseltip alçaltır. Baskıyı "Kalibrasyonla yazdır" ile başlattıktan sonra burada yeni ölçüm görünmüyorsa kalibrasyon tablayı yeniden ölçmemiş demektir.</p>
+          </div>
+          <div class="panel" style="grid-column:1/-1">
             <div class="ph"><svg class="i"><use href="#i-terminal"/></svg><h2>Konsol</h2><span class="spacer"></span><button class="btn sm ghost" id="btnLogClear">Temizle</button></div>
             <pre class="console" id="log" aria-live="polite"></pre>
             <div class="form-row">
@@ -734,6 +768,7 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
       if (paraTimer) clearInterval(paraTimer);
       paraTimer = setInterval(function () { requestPara(); pollObjects(); }, 5000);
       if (view === "history") requestHistory();
+      if (view === "maint") requestMesh();
       applyCam();
     };
     ws.onmessage = function (ev) { onMessage(ev.data); };
@@ -787,9 +822,11 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
     var newFile = d.printFileName !== undefined && d.printFileName !== st.printFileName;
     if (newFile || nowBusy !== wasBusy) clearObjects();
     for (var k in d) {
-      if (k === "retGcodeFileInfo2" || k === "historyList") continue;
+      if (k === "retGcodeFileInfo2" || k === "historyList" || k === "probedMatrix") continue;
       st[k] = d[k];
     }
+    if (d.probedMatrix !== undefined) onMesh(d.probedMatrix);
+    watchCal();
     if (d.objects !== undefined || d.excluded_objects !== undefined) { xoReplied = true; xoAsks = 0; }
     if (nowBusy && (newFile || !wasBusy)) requestObjects();
     if (d.state !== undefined && prev !== undefined && d.state !== prev) {
@@ -850,7 +887,10 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
     $("btnGcode").disabled = !open;
     $("btnRestart").disabled = !open;
     $("btnCleanErr").disabled = !open;
+    $("btnMesh").disabled = !open;
+    if (!mesh && open !== meshOpenSeen) { meshOpenSeen = open; renderMesh(); }
   }
+  var meshOpenSeen = null;
   function tempTxt(v) { var n = num(v); return n === null ? "—" : n.toFixed(0) + " °C"; }
 
   function renderJob(open, s, b, stTxt) {
@@ -1274,12 +1314,27 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
     lab.appendChild(cb);
     lab.appendChild(el("span", "", "Tabla boş ve temiz, filament takılı."));
     wrap.appendChild(lab);
-    wrap.appendChild(el("p", "hint", "Yazıcı başlamadan önce kendi kalibrasyonunu yapar (birkaç dakika sürer)."));
+    // Creality Print'teki "Print calibration" kutusu: baskı komutuna enableSelfTest:1 ekler
+    var calLab = el("label", "check");
+    var calCb = el("input"); calCb.type = "checkbox"; calCb.checked = lsGet("k1cal", "0") === "1";
+    calLab.appendChild(calCb);
+    var calTxt = el("span");
+    calTxt.appendChild(el("strong", "", "Kalibrasyonla yazdır"));
+    calTxt.appendChild(el("span", "sub", "Creality Print'teki “Print calibration” seçeneği. Yazıcı baskıdan önce kendi kalibrasyonunu yapar, başlangıç birkaç dakika uzar. Tablayı yeniden ölçüp ölçmediğini Bakım → Tabla haritası gösterir."));
+    calLab.appendChild(calTxt);
+    wrap.appendChild(calLab);
     cb.onchange = function () { $("mOk").disabled = !cb.checked; };
     ask({ title: "Baskıyı başlat", node: wrap, ok: "Yazdır", needCheck: true }).then(function (yes) {
       if (!yes) return;
       if (busy()) { toast("Yazıcı meşgul.", "bad"); return; }
-      if (sendSet({ opGcodeFile: "printprt:" + f.path }, "Baskı başlatıldı: " + f.name)) showView("control");
+      var cal = calCb.checked;
+      lsSet("k1cal", cal ? "1" : "0");
+      var params = { opGcodeFile: "printprt:" + f.path };
+      if (cal) {
+        params.enableSelfTest = 1;
+        startCalWatch();
+      }
+      if (sendSet(params, (cal ? "Kalibrasyonla baskı başlatıldı: " : "Baskı başlatıldı: ") + f.name)) showView("control");
     });
   }
 
@@ -1382,6 +1437,114 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
     if (document.hidden) { $("cam").removeAttribute("src"); } else if (camOn) applyCam();
   });
 
+  // ---------- Tabla haritası ----------
+  // Yazıcı reqProbedMatrix'e kayıtlı ağı döndürür: {num:36, val:[{x:"5.000000", y:"5.000000", z:"-0.022625"}, ...]}.
+  // Ağı tarayıcıda saklayıp her okumada karşılaştırırız; böylece kalibrasyonun tablayı yeniden ölçüp ölçmediği görünür.
+  var mesh = null, calWatch = null;
+  function requestMesh() { if (isOpen()) ws.send(JSON.stringify({ method: "get", params: { reqProbedMatrix: 1 } })); }
+  function storedMesh() { try { return JSON.parse(lsGet("k1mesh", "null")); } catch (e) { return null; } }
+  function parseMesh(pm) {
+    var vals = pm && Array.isArray(pm.val) ? pm.val : null;
+    if (!vals) return null;
+    var pts = [];
+    vals.forEach(function (v) {
+      if (typeof v === "string") { try { v = JSON.parse(v); } catch (e) { return; } }
+      var x = num(v && v.x), y = num(v && v.y), z = num(v && v.z);
+      if (x !== null && y !== null && z !== null) pts.push({ x: x, y: y, z: z });
+    });
+    if (pts.length < 4) return null;
+    pts.sort(function (a, b) { return a.y - b.y || a.x - b.x; });
+    var xs = [], ys = [];
+    pts.forEach(function (p) { if (xs.indexOf(p.x) < 0) xs.push(p.x); if (ys.indexOf(p.y) < 0) ys.push(p.y); });
+    xs.sort(function (a, b) { return a - b; });
+    ys.sort(function (a, b) { return a - b; });
+    return { xs: xs, ys: ys, z: pts.map(function (p) { return p.z; }), pts: pts };
+  }
+  function meshSig(z) { return z.map(function (v) { return v.toFixed(4); }).join(","); }
+  function onMesh(pm) {
+    var m = parseMesh(pm);
+    if (!m) { log("Tabla ağı okunamadı."); return; }
+    var sig = meshSig(m.z), old = storedMesh(), now = Date.now();
+    var rec = { xs: m.xs, ys: m.ys, z: m.z, sig: sig, seen: now, prevSeen: null, change: null, first: true };
+    if (old && old.sig) {
+      rec.first = false;
+      if (old.sig === sig) {
+        rec.seen = old.seen; rec.prevSeen = old.prevSeen; rec.change = old.change;
+      } else {
+        rec.prevSeen = old.seen;
+        if (Array.isArray(old.z) && old.z.length === m.z.length) {
+          var best = 0, at = 0;
+          m.z.forEach(function (v, i) { var dz = Math.abs(v - old.z[i]); if (dz > best) { best = dz; at = i; } });
+          rec.change = { max: best, x: m.pts[at].x, y: m.pts[at].y };
+        }
+        log("Tabla ağı değişti" + (rec.change ? " (en büyük fark " + rec.change.max.toFixed(3) + " mm)" : ""));
+      }
+    }
+    lsSet("k1mesh", JSON.stringify(rec));
+    mesh = rec;
+    renderMesh();
+    if (calWatch && calWatch.asked) {
+      if (calWatch.sig && calWatch.sig !== sig) toast("Kalibrasyon tablayı yeniden ölçtü; tabla haritası güncellendi.");
+      else if (calWatch.sig) toast("Kalibrasyon bitti ama kayıtlı tabla ağı değişmedi.", "warn");
+      calWatch = null;
+    } else if (calWatch && !calWatch.sawRun) calWatch.sig = sig; // kalibrasyon başlamadan önceki son ağ
+  }
+  function startCalWatch() {
+    var old = storedMesh();
+    calWatch = { started: Date.now(), sig: old && old.sig ? old.sig : "", sawRun: false, asked: false };
+    requestMesh();
+  }
+  function watchCal() {
+    // Kalibrasyonlu baskı başlatıldıysa: kalibrasyon bitince (ya da baskı ilerlemeye başlayınca) ağı yeniden oku
+    if (!calWatch || calWatch.asked) return;
+    if (Date.now() - calWatch.started > 30 * 60 * 1000) { calWatch = null; return; }
+    var w = +st.withSelfTest;
+    if (sNow() === 1 && w > 0 && w < 100) calWatch.sawRun = true;
+    var done = (calWatch.sawRun && w >= 100) || (sNow() === 1 && +st.printProgress > 0) || (!busy() && Date.now() - calWatch.started > 15000);
+    if (done) { calWatch.asked = true; setTimeout(requestMesh, 1500); }
+  }
+  function fmtStamp(ms) { return new Date(ms).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" }); }
+  function mm(v) { var a = Math.abs(v).toFixed(2); return (a === "0.00" ? "" : v > 0 ? "+" : "−") + a; }
+  function renderMesh() {
+    var box = $("mesh"), stats = $("meshStats"), note = $("meshNote");
+    box.textContent = ""; stats.textContent = ""; note.textContent = ""; note.className = "mesh-note";
+    var m = mesh || storedMesh();
+    if (!m || !Array.isArray(m.z) || !m.xs || !m.ys || m.z.length !== m.xs.length * m.ys.length) {
+      box.appendChild(el("div", "mesh-empty", isOpen() ? "Okumak için “Oku” düğmesine bas." : "Yazıcıya bağlanınca okunur."));
+      return;
+    }
+    var lo = 0, hi = 0;
+    m.z.forEach(function (v, i) { if (v < m.z[lo]) lo = i; if (v > m.z[hi]) hi = i; });
+    var span = Math.max(Math.abs(m.z[lo]), Math.abs(m.z[hi]), 0.1);
+    var nx = m.xs.length;
+    // Arka (büyük Y) üstte, ön altta; X soldan sağa
+    for (var r = m.ys.length - 1; r >= 0; r--) {
+      for (var c = 0; c < nx; c++) {
+        var i = r * nx + c, v = m.z[i], t = Math.min(1, Math.abs(v) / span);
+        var cell = el("div", "mesh-cell" + (i === lo || i === hi ? " mark" : ""), mm(v));
+        cell.style.background = v < 0 ? "rgba(90,169,255," + (0.12 + 0.78 * t).toFixed(2) + ")" : "rgba(255,176,32," + (0.12 + 0.78 * t).toFixed(2) + ")";
+        cell.title = "X " + Math.round(m.xs[c]) + " · Y " + Math.round(m.ys[r]) + ": " + v.toFixed(3) + " mm";
+        box.appendChild(cell);
+      }
+    }
+    box.style.gridTemplateColumns = "repeat(" + nx + ",minmax(0,1fr))";
+    function row(k, v) { stats.appendChild(el("dt", "", k)); stats.appendChild(el("dd", "num", v)); }
+    function where(i) { return "X " + Math.round(m.xs[i % nx]) + ", Y " + Math.round(m.ys[Math.floor(i / nx)]); }
+    row("En alçak", m.z[lo].toFixed(3) + " mm (" + where(lo) + ")");
+    row("En yüksek", m.z[hi].toFixed(3) + " mm (" + where(hi) + ")");
+    row("Fark", (m.z[hi] - m.z[lo]).toFixed(3) + " mm");
+    row("Nokta", m.xs.length + " × " + m.ys.length);
+    if (m.first) {
+      note.textContent = "İlk okuma (" + fmtStamp(m.seen) + "). Yazıcının bu ağı ne zaman ölçtüğü bilinmiyor; değişirse burada görünür.";
+    } else if (m.prevSeen) {
+      note.className = "mesh-note new";
+      note.textContent = "Yeni ölçüm: " + fmtStamp(m.seen) + "." + (m.change ? " Öncekine göre en büyük fark " + m.change.max.toFixed(3) + " mm (X " + Math.round(m.change.x) + ", Y " + Math.round(m.change.y) + ")." : "");
+    } else {
+      note.textContent = "Ağ " + fmtStamp(m.seen) + " tarihinden beri değişmedi.";
+    }
+  }
+  $("btnMesh").onclick = requestMesh;
+
   // ---------- Görünümler ----------
   function showView(name) {
     view = name;
@@ -1391,6 +1554,7 @@ input[type=range]:disabled{cursor:not-allowed;opacity:.5}
     if (name === "files") requestFilesQuiet();
     if (name === "history") requestHistory();
     if (name === "control") pollObjects();
+    if (name === "maint") requestMesh();
     window.scrollTo(0, 0);
   }
   function requestFilesQuiet() { if (isOpen()) ws.send(JSON.stringify({ method: "get", params: { reqGcodeFile: 1 } })); }
